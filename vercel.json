@@ -1,10 +1,9 @@
 {
-  "version": 2,
   "cleanUrls": true,
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
+  "rewrites": [
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/catalog", "destination": "/catalog.html" },
+    { "source": "/delivery", "destination": "/delivery.html" },
+    { "source": "/superadmin", "destination": "/superadmin.html" }
   ]
 }
