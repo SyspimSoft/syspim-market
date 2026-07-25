@@ -706,7 +706,11 @@ function App() {
 
       {/* 2. MAIN BODY GENERAL LIGHT RETAIL */}
       <main className="max-w-7xl mx-auto w-full px-4 lg:px-8 py-6 flex-1">
-        {/* ================= MODULO 1: PUNTO DE VEN            {/* LADO IZQUIERDO: BUSCADOR, CATEGORIAS Y GRID DE PRODUCTOS */}
+        {/* ================= MODULO 1: PUNTO DE VENTA (POS ESCRITORIO) ================= */}
+        {activeTab === 'pos' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            {/* LADO IZQUIERDO: BUSCADOR, CATEGORIAS Y GRID DE PRODUCTOS */}
             <div className="lg:col-span-7 xl:col-span-8 flex flex-col lg:h-[calc(100vh-6rem)]">
               
               {/* HEADER FIJO: BUSCADOR Y CATEGORÍAS (NO SE ESCONDE AL HACER SCROLL) */}
@@ -828,14 +832,6 @@ function App() {
                     );
                   })}
                 </div>
-              </div>
-
-            </div>   +
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
               </div>
 
             </div>
