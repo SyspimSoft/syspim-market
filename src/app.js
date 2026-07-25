@@ -832,7 +832,7 @@ function App() {
             </div>
 
             {/* LADO DERECHO: PANEL DE CAJA (ESTILO ARCA LIGHT) */}
-            <div className="lg:col-span-5 xl:col-span-4 sticky top-24">
+            <div className="lg:col-span-5 xl:col-span-4 sticky top-20 max-h-[calc(100vh-5rem)] overflow-y-auto pr-1">
               <div className="bg-[#FFFFFF] border border-[#E2E8F0] rounded-[20px] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex flex-col justify-between">
                 
                 <div>
@@ -880,7 +880,7 @@ function App() {
                   </div>
 
                   {/* LISTA DE ITEMS EN CARRITO */}
-                  <div className="mt-4 max-h-[260px] overflow-y-auto space-y-2.5 pr-1">
+                  <div className="mt-4 max-h-[180px] overflow-y-auto space-y-2.5 pr-1">
                     {cart.length === 0 ? (
                       <div className="py-10 text-center border border-dashed border-[#E2E8F0] rounded-[16px] bg-[#F8FAFC]">
                         <span className="text-3xl block mb-1.5 opacity-40">🛒</span>
