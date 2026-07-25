@@ -706,122 +706,131 @@ function App() {
 
       {/* 2. MAIN BODY GENERAL LIGHT RETAIL */}
       <main className="max-w-7xl mx-auto w-full px-4 lg:px-8 py-6 flex-1">
-        {/* ================= MODULO 1: PUNTO DE VENTA (POS ESCRITORIO) ================= */}
-        {activeTab === 'pos' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            
-            {/* LADO IZQUIERDO: BUSCADOR, CATEGORIAS Y GRID DE PRODUCTOS */}
-            <div className="lg:col-span-7 xl:col-span-8 space-y-4">
+        {/* ================= MODULO 1: PUNTO DE VEN            {/* LADO IZQUIERDO: BUSCADOR, CATEGORIAS Y GRID DE PRODUCTOS */}
+            <div className="lg:col-span-7 xl:col-span-8 flex flex-col lg:h-[calc(100vh-6rem)]">
               
-              {/* BUSCADOR ROUNDED PILL (ESTILO ARCA CON LECTOR) */}
-              <div className="bg-[#FFFFFF] border border-[#E2E8F0] p-3 rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex items-center gap-3">
-                <span className="text-lg text-[#94A3B8] ml-2">🔍</span>
-                <input 
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Buscar 'leche', 'listamilk', 'parmalat', 'carnation', 'bravo'..."
-                  className="bg-transparent w-full text-[#0F172A] font-medium placeholder-[#94A3B8] focus:outline-none text-sm"
-                />
-                <span className="hidden sm:inline-block text-[#94A3B8] font-mono text-xs pr-2">[|||]</span>
-                {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="text-xs text-[#94A3B8] hover:text-[#0F172A] pr-2">
-                    ✕
-                  </button>
-                )}
+              {/* HEADER FIJO: BUSCADOR Y CATEGORÍAS (NO SE ESCONDE AL HACER SCROLL) */}
+              <div className="sticky top-0 bg-[#F8FAFC] z-20 pb-3 pt-1 space-y-3 border-b border-[#E2E8F0] mb-3">
+                {/* BUSCADOR ROUNDED PILL (ESTILO ARCA CON LECTOR) */}
+                <div className="bg-[#FFFFFF] border border-[#E2E8F0] p-3 rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex items-center gap-3">
+                  <span className="text-lg text-[#94A3B8] ml-2">🔍</span>
+                  <input 
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Buscar 'leche', 'listamilk', 'parmalat', 'carnation', 'bravo'..."
+                    className="bg-transparent w-full text-[#0F172A] font-medium placeholder-[#94A3B8] focus:outline-none text-sm"
+                  />
+                  <span className="hidden sm:inline-block text-[#94A3B8] font-mono text-xs pr-2">[|||]</span>
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} className="text-xs text-[#94A3B8] hover:text-[#0F172A] pr-2">
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* CHIPS DE CONTEO Y CATEGORÍAS */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                    {CATEGORIAS.map(cat => {
+                      const isActive = selectedCategory === cat.id;
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => setSelectedCategory(cat.id)}
+                          className={`px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap border ${
+                            isActive
+                              ? 'bg-[#E0F2FE] text-[#0284C7] border-[#BAE6FD] shadow-sm'
+                              : 'bg-[#FFFFFF] text-[#64748B] border-[#E2E8F0] hover:bg-[#F8FAFC] hover:text-[#0F172A]'
+                          }`}
+                        >
+                          <span>{cat.icon}</span>
+                          <span>{cat.nombre}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <span className="text-xs font-bold text-[#64748B] whitespace-nowrap ml-2">
+                    {filteredProducts.length} prods
+                  </span>
+                </div>
               </div>
 
-              {/* CHIPS DE CONTEO Y CATEGORÍAS */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-                  {CATEGORIAS.map(cat => {
-                    const isActive = selectedCategory === cat.id;
+              {/* RUEDA / SCROLLBAR INDEPENDIENTE PARA LA LISTA DE PRODUCTOS */}
+              <div className="flex-1 overflow-y-auto pr-2 pb-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-4 gap-4">
+                  {filteredProducts.map((product) => {
+                    const isOutOfStock = product.stock <= 0;
+                    const pricePrev = product.precioAnterior || product.precio_anterior;
+
                     return (
-                      <button
-                        key={cat.id}
-                        onClick={() => setSelectedCategory(cat.id)}
-                        className={`px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap border ${
-                          isActive
-                            ? 'bg-[#E0F2FE] text-[#0284C7] border-[#BAE6FD] shadow-sm'
-                            : 'bg-[#FFFFFF] text-[#64748B] border-[#E2E8F0] hover:bg-[#F8FAFC] hover:text-[#0F172A]'
+                      <div 
+                        key={product.id}
+                        className={`bg-[#FFFFFF] border border-[#E2E8F0] p-4 rounded-[20px] shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex flex-col justify-between transition-all hover:shadow-md hover:border-[#BAE6FD] relative ${
+                          isOutOfStock ? 'opacity-50 grayscale' : ''
                         }`}
+                        onClick={() => !isOutOfStock && addToCart(product)}
                       >
-                        <span>{cat.icon}</span>
-                        <span>{cat.nombre}</span>
-                      </button>
+                        {/* IMAGEN DEL PRODUCTO */}
+                        <div className="w-full h-32 bg-[#FFFFFF] rounded-xl overflow-hidden mb-3 flex items-center justify-center p-2">
+                          <img 
+                            src={product.imagen || product.imagen_url} 
+                            alt={product.nombre}
+                            className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+
+                        {/* INFORMACION DEL PRODUCTO */}
+                        <div>
+                          <h4 className="font-bold text-xs text-[#0F172A] line-clamp-2 leading-snug font-jakarta">
+                            {product.nombre}
+                          </h4>
+                          <span className="text-[11px] text-[#64748B] block mt-0.5">
+                            {product.categoria}
+                          </span>
+                          
+                          <div className="flex items-center justify-between mt-1.5 text-[10px]">
+                            <span className="text-[#64748B] font-medium">Stock: {product.stock}</span>
+                            {isOutOfStock && (
+                              <span className="text-[#EF4444] font-bold uppercase">Agotado</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* PRECIO & BOTÓN "+" CIRCULAR ROJO (ESTILO EXACTO ARCA / BRAVO) */}
+                        <div className="flex items-end justify-between pt-3 mt-2 border-t border-[#F1F5F9]">
+                          <div>
+                            <span className="font-bold text-sm text-[#0F172A] block font-jakarta">
+                              RD$ {product.precio}
+                            </span>
+                            {pricePrev && (
+                              <span className="text-[10px] text-[#EF4444] line-through font-normal">
+                                RD$ {pricePrev}
+                              </span>
+                            )}
+                          </div>
+
+                          <button 
+                            disabled={isOutOfStock}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addToCart(product);
+                            }}
+                            className={`w-8 h-8 rounded-full bg-[#FFFFFF] border border-[#FEE2E2] shadow-sm flex items-center justify-center text-[#EF4444] font-bold text-lg hover:bg-[#FEF2F2] hover:scale-105 active:scale-95 transition-all ${
+                              isOutOfStock ? 'opacity-40 cursor-not-allowed text-[#64748B] bg-[#F1F5F9]' : ''
+                            }`}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
-                <span className="text-xs font-bold text-[#64748B] whitespace-nowrap ml-2">
-                  {filteredProducts.length} prods
-                </span>
               </div>
 
-              {/* GRID DE PRODUCTOS EN TARJETAS LIMPIAS CON BOTÓN "+" ROJO CIRCULAR (ESTILO ARCA / BRAVO) */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-4 gap-4">
-                {filteredProducts.map((product) => {
-                  const isOutOfStock = product.stock <= 0;
-                  const pricePrev = product.precioAnterior || product.precio_anterior;
-
-                  return (
-                    <div 
-                      key={product.id}
-                      className={`bg-[#FFFFFF] border border-[#E2E8F0] p-4 rounded-[20px] shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex flex-col justify-between transition-all hover:shadow-md hover:border-[#BAE6FD] relative ${
-                        isOutOfStock ? 'opacity-50 grayscale' : ''
-                      }`}
-                      onClick={() => !isOutOfStock && addToCart(product)}
-                    >
-                      {/* IMAGEN DEL PRODUCTO */}
-                      <div className="w-full h-32 bg-[#FFFFFF] rounded-xl overflow-hidden mb-3 flex items-center justify-center p-2">
-                        <img 
-                          src={product.imagen || product.imagen_url} 
-                          alt={product.nombre}
-                          className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-
-                      {/* INFORMACION DEL PRODUCTO */}
-                      <div>
-                        <h4 className="font-bold text-xs text-[#0F172A] line-clamp-2 leading-snug font-jakarta">
-                          {product.nombre}
-                        </h4>
-                        <span className="text-[11px] text-[#64748B] block mt-0.5">
-                          {product.categoria}
-                        </span>
-                        
-                        <div className="flex items-center justify-between mt-1.5 text-[10px]">
-                          <span className="text-[#64748B] font-medium">Stock: {product.stock}</span>
-                          {isOutOfStock && (
-                            <span className="text-[#EF4444] font-bold uppercase">Agotado</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* PRECIO & BOTÓN "+" CIRCULAR ROJO (ESTILO EXACTO ARCA / BRAVO) */}
-                      <div className="flex items-end justify-between pt-3 mt-2 border-t border-[#F1F5F9]">
-                        <div>
-                          <span className="font-bold text-sm text-[#0F172A] block font-jakarta">
-                            RD$ {product.precio}
-                          </span>
-                          {pricePrev && (
-                            <span className="text-[10px] text-[#EF4444] line-through font-normal">
-                              RD$ {pricePrev}
-                            </span>
-                          )}
-                        </div>
-
-                        <button 
-                          disabled={isOutOfStock}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addToCart(product);
-                          }}
-                          className={`w-8 h-8 rounded-full bg-[#FFFFFF] border border-[#FEE2E2] shadow-sm flex items-center justify-center text-[#EF4444] font-bold text-lg hover:bg-[#FEF2F2] hover:scale-105 active:scale-95 transition-all ${
-                            isOutOfStock ? 'opacity-40 cursor-not-allowed text-[#64748B] bg-[#F1F5F9]' : ''
-                          }`}
-                        >
-                          +
+            </div>   +
                         </button>
                       </div>
                     </div>
