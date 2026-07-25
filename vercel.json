@@ -1,9 +1,3 @@
 {
-  "cleanUrls": true,
-  "rewrites": [
-    { "source": "/", "destination": "/index.html" },
-    { "source": "/catalog", "destination": "/catalog.html" },
-    { "source": "/delivery", "destination": "/delivery.html" },
-    { "source": "/superadmin", "destination": "/superadmin.html" }
-  ]
+  "cleanUrls": true
 }
