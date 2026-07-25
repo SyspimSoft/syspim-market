@@ -1,0 +1,16 @@
+{
+  "name": "Syspim Market - Catálogo de Colmado",
+  "short_name": "Syspim Market",
+  "description": "Haz tus pedidos en tu colmado favorito rápidamente por WhatsApp.",
+  "start_url": "./#catalog",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#f59e0b",
+  "icons": [
+    {
+      "src": "public/assets/placeholder.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}

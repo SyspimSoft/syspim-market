@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Despacho & Delivery - SYSPIM MARKET</title>
+    <meta name="description" content="Portal de ejecución para repartidores y delivery.">
+    <link rel="shortcut icon" href="public/favicon.ico" type="image/x-icon">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              saas: {
+                bg: '#F8FAFC',
+                card: '#FFFFFF',
+                elevated: '#F1F5F9',
+                border: '#E2E8F0',
+                text: '#0F172A',
+                muted: '#64748B',
+                primary: '#0284C7',
+                hover: '#0369A1',
+                success: '#15803D',
+                warning: '#B45309'
+              }
+            },
+            fontFamily: {
+              jakarta: ['"Plus Jakarta Sans"', 'sans-serif'],
+              mono: ['"JetBrains Mono"', 'monospace'],
+            }
+          }
+        }
+      }
+    </script>
+
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="src/config/supabase.js"></script>
+
+    <!-- React 18 & Babel CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-[#F8FAFC] text-[#0F172A] font-jakarta min-h-screen antialiased selection:bg-[#E0F2FE] selection:text-[#0284C7]">
+
+    <div id="delivery-app-root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect } = React;
+
+      const DEMO_ORDERS = [
+        {
+          id: 'PED-9081',
+          cliente_nombre: 'Carlos Mendoza',
+          cliente_telefono: '8095550199',
+          direccion_entrega: 'Calle Pepillo Salcedo #14, Ens. La Fe',
+          monto_total: 545.00,
+          metodo_pago: 'Efectivo (Paga con $1,000 - Devuelta: $455.00)',
+          estado: 'pendiente',
+          delivery_token: 'DEL-8F3A29',
+          created_at: new Date().toISOString(),
+          detalles: [{ cantidad: 2, nombre: 'Rica Leche Listamilk Lt', precio_unitario: 76 }]
+        }
+      ];
+
+      function StandaloneDeliveryApp() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tokenQuery = urlParams.get('token') || urlParams.get('order') || '';
+        
+        const [tokenInput, setTokenInput] = useState(tokenQuery);
+        const [order, setOrder] = useState(null);
+        const [status, setStatus] = useState('pendiente');
+        const [toastMsg, setToastMsg] = useState(null);
+
+        const showToast = (msg) => {
+          setToastMsg(msg);
+          setTimeout(() => setToastMsg(null), 3000);
+        };
+
+        const searchOrder = (searchToken) => {
+          const t = (searchToken || tokenInput).trim().toUpperCase();
+          if (!t) return;
+
+          // Buscar en localStorage / window.AppState / DEMO_ORDERS
+          let found = null;
+          try {
+            const savedLast = localStorage.getItem('syspim_last_order');
+            if (savedLast) {
+              const parsed = JSON.parse(savedLast);
+              if (parsed.delivery_token === t || parsed.id === t) found = parsed;
+            }
+          } catch (e) {}
+
+          if (!found && window.AppState && window.AppState.pedidos) {
+            found = window.AppState.pedidos.find(p => p.delivery_token === t || p.id === t);
+          }
+
+          if (!found) {
+            found = DEMO_ORDERS.find(p => p.delivery_token === t || p.id === t || p.id.endsWith(t));
+          }
+
+          if (found) {
+            setOrder(found);
+            setStatus(found.estado || 'en_camino');
+            showToast(`✅ Pedido #${found.id} cargado`);
+          } else {
+            alert(`⚠️ No se encontró ningún pedido con el Token "${t}".`);
+          }
+        };
+
+        useEffect(() => {
+          if (tokenQuery) {
+            searchOrder(tokenQuery);
+          }
+        }, [tokenQuery]);
+
+        const markAsDelivered = () => {
+          if (!order) return;
+          setStatus('entregado');
+          if (order) order.estado = 'entregado';
+          showToast('🎉 ¡Pedido completado y entregado!');
+          alert(`🎉 Pedido #${order.id} marcado como ENTREGADO con éxito.`);
+        };
+
+        return (
+          <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
+            
+            {/* TOAST FLOATER */}
+            {toastMsg && (
+              <div className="fixed top-4 right-4 z-50 bg-[#0F172A] text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2">
+                <span>✨</span> {toastMsg}
+              </div>
+            )}
+
+            {/* HEADER EXCLUSIVO DELIVERY */}
+            <header className="bg-white border-b border-[#E2E8F0] px-4 py-3.5 sticky top-0 z-30 shadow-sm">
+              <div className="max-w-md mx-auto flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-[#15803D] text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                    🛵
+                  </div>
+                  <div>
+                    <h1 className="font-extrabold text-sm text-[#0F172A]">SYSPIM DELIVERY</h1>
+                    <p className="text-[10px] text-[#64748B] font-medium">Ejecución de Pedidos para Repartidores</p>
+                  </div>
+                </div>
+
+                {order && (
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase border ${
+                    status === 'entregado' 
+                      ? 'bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]' 
+                      : 'bg-[#FEF3C7] text-[#B45309] border-[#FDE68A]'
+                  }`}>
+                    {status}
+                  </span>
+                )}
+              </div>
+            </header>
+
+            <main className="max-w-md mx-auto w-full px-4 py-5 flex-1 space-y-4">
+              
+              {/* BUSCADOR DE TOKEN MANUAL */}
+              {!order ? (
+                <div className="bg-white border border-[#E2E8F0] p-6 rounded-[24px] shadow-sm space-y-4 text-center">
+                  <div className="w-16 h-16 rounded-full bg-[#E0F2FE] text-[#0284C7] flex items-center justify-center text-3xl mx-auto font-bold">
+                    🔑
+                  </div>
+                  <div>
+                    <h2 className="font-extrabold text-base text-[#0F172A]">Ingresar Token de Delivery</h2>
+                    <p className="text-xs text-[#64748B] mt-1">Escribe el código proporcionado por la caja del colmado (Ej: DEL-8F3A29)</p>
+                  </div>
+
+                  <form onSubmit={(e) => { e.preventDefault(); searchOrder(); }} className="space-y-3 pt-2">
+                    <input 
+                      type="text" 
+                      placeholder="DEL-8F3A29"
+                      value={tokenInput}
+                      onChange={(e) => setTokenInput(e.target.value)}
+                      className="w-full text-center bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-4 py-3 text-sm font-mono font-bold text-[#0F172A] tracking-wider uppercase"
+                    />
+                    <button type="submit" className="w-full py-3.5 bg-[#0284C7] hover:bg-[#0369A1] text-white font-bold text-xs uppercase tracking-wider rounded-full shadow-md shadow-[#0284C7]/20">
+                      🔍 Cargar Pedido de Reparto
+                    </button>
+                  </form>
+                </div>
+              ) : (
+                /* TARJETA DETALLADA DE REPARTO */
+                <div className="bg-white border border-[#E2E8F0] p-5 rounded-[24px] shadow-md space-y-4 animate-fade-in-up">
+                  
+                  {/* CABECERA */}
+                  <div className="flex justify-between items-start border-b border-[#F1F5F9] pb-3">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase text-[#64748B] tracking-wider block">ID DE PEDIDO</span>
+                      <h2 className="font-extrabold text-lg text-[#0F172A] font-jakarta">#{order.id}</h2>
+                    </div>
+                    <div className="bg-[#E0F2FE] border border-[#BAE6FD] px-3 py-1 rounded-full text-xs font-mono font-bold text-[#0369A1]">
+                      🔑 {order.delivery_token}
+                    </div>
+                  </div>
+
+                  {/* CLIENTE Y DIRECCIÓN */}
+                  <div className="space-y-2.5 text-xs">
+                    <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-3 rounded-2xl space-y-1">
+                      <span className="text-[10px] font-bold uppercase text-[#64748B] block">DATOS DEL CLIENTE:</span>
+                      <p className="font-extrabold text-sm text-[#0F172A]">👤 {order.cliente_nombre || 'Cliente General'}</p>
+                      <p className="font-mono text-[#64748B]">📞 {order.cliente_telefono || 'Sin teléfono'}</p>
+                    </div>
+
+                    <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-3 rounded-2xl space-y-1">
+                      <span className="text-[10px] font-bold uppercase text-[#64748B] block">DIRECCIÓN DE ENTREGA:</span>
+                      <p className="font-bold text-sm text-[#0F172A] leading-snug">📍 {order.direccion_entrega}</p>
+                    </div>
+                  </div>
+
+                  {/* ACCIONES RÁPIDAS (LLAMAR & NAVEGAR MAPS) */}
+                  <div className="grid grid-cols-2 gap-2.5 pt-1">
+                    <a 
+                      href={`tel:${(order.cliente_telefono || '').replace(/[^0-9+]/g, '')}`}
+                      className="py-3 bg-[#E0F2FE] hover:bg-[#BAE6FD] text-[#0369A1] border border-[#BAE6FD] font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all text-center"
+                    >
+                      <span>📞</span> Llamar Cliente
+                    </a>
+
+                    <a 
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.direccion_entrega)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-3 bg-[#E0F2FE] hover:bg-[#BAE6FD] text-[#0369A1] border border-[#BAE6FD] font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all text-center"
+                    >
+                      <span>🗺️</span> Google Maps
+                    </a>
+                  </div>
+
+                  {/* DESGLOSE DE PRODUCTOS */}
+                  <div className="border-t border-[#F1F5F9] pt-3 space-y-2">
+                    <span className="text-[10px] font-bold uppercase text-[#64748B] block">PRODUCTOS A ENTREGAR:</span>
+                    <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-3 rounded-2xl space-y-1.5 text-xs">
+                      {(order.detalles || []).map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center text-[#0F172A]">
+                          <span className="font-semibold">• {item.cantidad}x {item.nombre}</span>
+                          <span className="font-mono font-bold text-[#64748B]">RD$ {(item.precio_unitario * item.cantidad).toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* MONTO A COBRAR Y DEVUELTA */}
+                  <div className="bg-[#FEF3C7]/60 border border-[#FDE68A] p-3.5 rounded-2xl space-y-1 text-xs">
+                    <span className="text-[10px] font-bold uppercase text-[#B45309] block">MONTO A COBRAR Y PAGO:</span>
+                    <p className="font-extrabold text-sm text-[#0F172A]">💳 {order.metodo_pago}</p>
+                    <div className="pt-1 flex justify-between items-center text-sm font-extrabold text-[#15803D]">
+                      <span>TOTAL COBRAR:</span>
+                      <span>RD$ {(order.monto_total || order.total || 0).toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  {/* BOTÓN FINAL DE CONFIRMACIÓN DE ENTREGA */}
+                  {status !== 'entregado' ? (
+                    <button
+                      onClick={markAsDelivered}
+                      className="w-full py-4 bg-[#15803D] hover:bg-[#166534] text-white font-extrabold text-xs uppercase tracking-wider rounded-full shadow-lg shadow-[#15803D]/25 flex items-center justify-center gap-2 transition-all active:scale-95 mt-2"
+                    >
+                      <span>✅ Marcar Pedido Como Entregado</span>
+                    </button>
+                  ) : (
+                    <div className="p-3.5 bg-[#DCFCE7] border border-[#86EFAC] text-[#15803D] font-extrabold text-xs text-center rounded-2xl">
+                      ✨ ESTE PEDIDO FUE ENTREGADO CON ÉXITO
+                    </div>
+                  )}
+
+                  <button 
+                    onClick={() => setOrder(null)} 
+                    className="w-full py-2 text-center text-xs font-bold text-[#64748B] hover:text-[#0F172A]"
+                  >
+                    ← Buscar otro pedido
+                  </button>
+
+                </div>
+              )}
+
+            </main>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById('delivery-app-root')).render(<StandaloneDeliveryApp />);
+    </script>
+</body>
+</html>

@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo Digital de Pedidos - SYSPIM MARKET</title>
+    <meta name="description" content="Haz tu pedido en línea de forma rápida y sencilla para entrega a domicilio.">
+    <link rel="shortcut icon" href="public/favicon.ico" type="image/x-icon">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              saas: {
+                bg: '#F8FAFC',
+                card: '#FFFFFF',
+                elevated: '#F1F5F9',
+                border: '#E2E8F0',
+                text: '#0F172A',
+                muted: '#64748B',
+                primary: '#0284C7',
+                hover: '#0369A1',
+                pillBg: '#E0F2FE',
+                actionRed: '#EF4444',
+                success: '#15803D'
+              }
+            },
+            fontFamily: {
+              jakarta: ['"Plus Jakarta Sans"', 'sans-serif'],
+              mono: ['"JetBrains Mono"', 'monospace'],
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="src/config/supabase.js"></script>
+
+    <!-- React 18 & Babel CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-[#F8FAFC] text-[#0F172A] font-jakarta min-h-screen antialiased selection:bg-[#E0F2FE] selection:text-[#0284C7]">
+
+    <div id="catalog-app-root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect, useMemo } = React;
+
+      // DATOS DE CATÁLOGO INICIAL
+      const PRODUCTOS_INICIALES = [
+        { id: 101, nombre: 'Rica Leche Listamilk Lt', precio: 76, precioAnterior: 78, categoria: 'Lácteos', imagen: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=400&q=80', stock: 50 },
+        { id: 102, nombre: 'Rica Leche Descremada Lt', precio: 76, categoria: 'Lácteos', imagen: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=400&q=80', stock: 30 },
+        { id: 103, nombre: 'Bravo Leche Uht Entera 1Lt', precio: 59, categoria: 'Lácteos', imagen: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=400&q=80', stock: 40 },
+        { id: 104, nombre: 'Bravo Leche Uht 1.5%', precio: 59, categoria: 'Lácteos', imagen: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=400&q=80', stock: 25 },
+        { id: 105, nombre: 'Bravo Dulce De Leche 400 Gr', precio: 109, categoria: 'Dulces', imagen: 'https://images.unsplash.com/photo-1589119908995-c6837fa14848?auto=format&fit=crop&w=400&q=80', stock: 15 },
+        { id: 106, nombre: 'Rica Leche S/Lactosa Lt', precio: 82, categoria: 'Lácteos', imagen: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=400&q=80', stock: 20 },
+        { id: 107, nombre: 'Bravo Pan Viga Integral 800 Gr', precio: 99, categoria: 'Panadería', imagen: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80', stock: 18 },
+        { id: 108, nombre: 'Bravo Salsa Pasta Bolognesa 14Oz', precio: 179, categoria: 'Abarrotes', imagen: 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=400&q=80', stock: 12 },
+        { id: 109, nombre: 'Huevos Frescos Cartón 30 Unid', precio: 195, categoria: 'Fresco', imagen: 'https://images.unsplash.com/photo-1516448620398-c5f44bf9f441?auto=format&fit=crop&w=400&q=80', stock: 10 },
+        { id: 110, nombre: 'Refresco Coca-Cola 2 Litros', precio: 95, categoria: 'Bebidas', imagen: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=400&q=80', stock: 35 }
+      ];
+
+      const CATEGORIAS = [
+        { id: 'todos', nombre: 'Todos los Productos', icon: '🛒' },
+        { id: 'lacteos', nombre: 'Lácteos', icon: '🥛' },
+        { id: 'bebidas', nombre: 'Bebidas', icon: '🥤' },
+        { id: 'panaderia', nombre: 'Panadería', icon: '🍞' },
+        { id: 'dulces', nombre: 'Dulces', icon: '🍬' },
+        { id: 'abarrotes', nombre: 'Abarrotes', icon: '🥫' }
+      ];
+
+      function StandaloneCustomerCatalog() {
+        const [products, setProducts] = useState(PRODUCTOS_INICIALES);
+        const [searchQuery, setSearchQuery] = useState('');
+        const [selectedCategory, setSelectedCategory] = useState('todos');
+        const [cart, setCart] = useState([]);
+        const [showOrderModal, setShowOrderModal] = useState(false);
+        const [toastMsg, setToastMsg] = useState(null);
+
+        // Formulario y Perfil del Cliente
+        const [savedProfile, setSavedProfile] = useState(() => {
+          try {
+            const saved = localStorage.getItem('syspim_saved_customer_profile');
+            return saved ? JSON.parse(saved) : null;
+          } catch (e) {
+            return null;
+          }
+        });
+
+        const [customerName, setCustomerName] = useState(savedProfile?.nombre || '');
+        const [customerPhone, setCustomerPhone] = useState(savedProfile?.telefono || '');
+        const [customerAddress, setCustomerAddress] = useState(savedProfile?.direccion || '');
+        
+        // Ubicación Temporal y Edición de Perfil
+        const [isEditingProfile, setIsEditingProfile] = useState(!savedProfile);
+        const [useAlternateAddress, setUseAlternateAddress] = useState(false);
+        const [alternateAddress, setAlternateAddress] = useState('');
+        const [saveForFuture, setSaveForFuture] = useState(true);
+
+        const [paymentMethod, setPaymentMethod] = useState('Efectivo');
+        const [cashPagarCon, setCashPagarCon] = useState('1000');
+        const [isSubmitting, setIsSubmitting] = useState(false);
+
+        // Obtener Tenant de la URL (?tenant=slug)
+        const urlParams = new URLSearchParams(window.location.search);
+        const tenantSlug = urlParams.get('tenant') || 'colmado-don-pedro';
+        const colmadoNombre = tenantSlug.replace(/-/g, ' ').toUpperCase();
+
+        const showToast = (msg) => {
+          setToastMsg(msg);
+          setTimeout(() => setToastMsg(null), 3000);
+        };
+
+        const addToCart = (product) => {
+          setCart(prev => {
+            const existing = prev.find(item => item.id === product.id);
+            if (existing) {
+              return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
+            }
+            return [...prev, { ...product, qty: 1 }];
+          });
+          showToast(`✅ ${product.nombre} agregado`);
+        };
+
+        const updateCartQty = (id, delta) => {
+          setCart(prev => {
+            return prev.map(item => {
+              if (item.id === id) {
+                const newQty = item.qty + delta;
+                return newQty > 0 ? { ...item, qty: newQty } : null;
+              }
+              return item;
+            }).filter(Boolean);
+          });
+        };
+
+        const cartCount = useMemo(() => cart.reduce((sum, item) => sum + item.qty, 0), [cart]);
+        const cartTotal = useMemo(() => cart.reduce((sum, item) => sum + (item.precio * item.qty), 0), [cart]);
+
+        const cashVal = parseFloat(cashPagarCon) || 0;
+        const devueltaMonto = cashVal > cartTotal ? cashVal - cartTotal : 0;
+
+        const filteredProducts = useMemo(() => {
+          return products.filter(p => {
+            const matchesSearch = p.nombre.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesCategory = selectedCategory === 'todos' || (p.categoria || '').toLowerCase().includes(selectedCategory.toLowerCase());
+            return matchesSearch && matchesCategory;
+          });
+        }, [products, searchQuery, selectedCategory]);
+
+        // ENVIAR PEDIDO AL COLMADO EN TIEMPO REAL
+        const handleSendOrderToColmado = async (e) => {
+          e.preventDefault();
+
+          const finalDireccion = useAlternateAddress && alternateAddress.trim() 
+            ? `${alternateAddress.trim()} (Ubicación Temporal)`
+            : customerAddress;
+
+          if (!customerName || !customerPhone || !finalDireccion) {
+            alert('⚠️ Por favor completa tu nombre, teléfono y dirección.');
+            return;
+          }
+
+          // Guardar perfil para futuros pedidos si se marcó la casilla
+          if (saveForFuture) {
+            const profileToSave = {
+              nombre: customerName,
+              telefono: customerPhone,
+              direccion: customerAddress
+            };
+            localStorage.setItem('syspim_saved_customer_profile', JSON.stringify(profileToSave));
+            setSavedProfile(profileToSave);
+            setIsEditingProfile(false);
+          }
+
+          setIsSubmitting(true);
+
+          try {
+            const pagoDetalle = paymentMethod === 'Efectivo' 
+              ? `Efectivo (Paga con RD$ ${cashVal.toFixed(2)} - Devuelta: RD$ ${devueltaMonto.toFixed(2)})`
+              : paymentMethod;
+
+            const orderPayload = {
+              id: 'PED-' + Math.floor(100000 + Math.random() * 900000),
+              tenant_slug: tenantSlug,
+              cliente_nombre: customerName,
+              cliente_telefono: customerPhone,
+              direccion_entrega: finalDireccion,
+              monto_total: cartTotal,
+              metodo_pago: pagoDetalle,
+              estado: 'pendiente',
+              delivery_token: 'DEL-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
+              detalles: cart.map(i => ({ cantidad: i.qty, nombre: i.nombre, precio_unitario: i.precio })),
+              created_at: new Date().toISOString()
+            };
+
+            // Transmitir orden internamente vía BroadcastChannel (sincroniza con la pantalla del colmado sin cambiar de pestaña)
+            try {
+              const broadcast = new BroadcastChannel('syspim_orders_channel');
+              broadcast.postMessage({ type: 'NEW_ORDER', order: orderPayload });
+              broadcast.close();
+            } catch (e) {
+              console.log('Broadcast error:', e);
+            }
+
+            // Guardar en localStorage para desencadenar el evento de almacenamiento cruzado
+            localStorage.setItem('syspim_last_order', JSON.stringify({ ...orderPayload, timestamp: Date.now() }));
+
+            // Guardar en Supabase Realtime si está conectado
+            if (window.supabaseClient) {
+              await window.supabaseClient.from('pedidos').insert([orderPayload]);
+            }
+
+            // También guardar en memoria local global para simulación inmediata
+            if (window.AppState) {
+              window.AppState.pedidos = window.AppState.pedidos || [];
+              window.AppState.pedidos.unshift(orderPayload);
+            }
+
+            setShowOrderModal(false);
+            setCart([]);
+            showToast(`🎉 ¡Pedido ${orderPayload.id} enviado al colmado!`);
+            alert(`🎉 ¡Tu pedido ${orderPayload.id} ha sido enviado internamente al colmado!\n\n🔑 Token de Delivery: ${orderPayload.delivery_token}\n\nEl colmado ha recibido la orden en su pantalla de caja y el repartidor está preparando la entrega.`);
+          } catch (err) {
+            console.error('Error sending order:', err);
+            alert('Pedido registrado para el colmado.');
+          } finally {
+            setIsSubmitting(false);
+          }
+        };
+
+        return (
+          <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
+            
+            {/* TOAST FLOATER */}
+            {toastMsg && (
+              <div className="fixed top-4 right-4 z-50 bg-[#0F172A] text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg animate-fade-in-up flex items-center gap-2">
+                <span>✨</span> {toastMsg}
+              </div>
+            )}
+
+            {/* HEADER EXCLUSIVO PARA CLIENTES (SOLO DATOS DEL COLMADO) */}
+            <header className="bg-white border-b border-[#E2E8F0] px-4 lg:px-8 py-3.5 sticky top-0 z-30 shadow-sm">
+              <div className="max-w-4xl mx-auto flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-[14px] bg-[#0284C7] text-white flex items-center justify-center font-bold text-xl shadow-md shadow-[#0284C7]/20">
+                    🏪
+                  </div>
+                  <div>
+                    <h1 className="font-extrabold text-base lg:text-lg text-[#0F172A] tracking-tight">
+                      {colmadoNombre}
+                    </h1>
+                    <p className="text-[11px] text-[#64748B] font-medium">Catálogo Digital Oficial • Pedidos directos a domicilio</p>
+                  </div>
+                </div>
+
+                <div className="hidden sm:flex items-center gap-2 bg-[#E0F2FE] border border-[#BAE6FD] px-3.5 py-1 rounded-full text-xs font-bold text-[#0369A1]">
+                  <span>📞 809-513-1416</span>
+                </div>
+              </div>
+            </header>
+
+            {/* CONTENIDO PRINCIPAL DEL CATÁLOGO */}
+            <main className="max-w-4xl mx-auto w-full px-4 py-6 flex-1 space-y-5 pb-28">
+              
+              {/* BUSCADOR ROUNDED PILL */}
+              <div className="bg-white border border-[#E2E8F0] p-3 rounded-full shadow-sm flex items-center gap-3">
+                <span className="text-lg text-[#94A3B8] ml-2">🔍</span>
+                <input 
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Buscar 'leche', 'pan', 'coca-cola', 'huevos'..."
+                  className="bg-transparent w-full text-[#0F172A] font-medium placeholder-[#94A3B8] focus:outline-none text-sm"
+                />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery('')} className="text-xs text-[#94A3B8] hover:text-[#0F172A] pr-2">✕</button>
+                )}
+              </div>
+
+              {/* PILLS DE CATEGORÍAS */}
+              <div>
+                <span className="text-xs font-bold text-[#64748B] block mb-2">
+                  Mostrando {filteredProducts.length} productos disponibles:
+                </span>
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                  {CATEGORIAS.map(cat => {
+                    const isActive = selectedCategory === cat.id;
+                    const count = cat.id === 'todos' 
+                      ? products.length 
+                      : products.filter(p => (p.categoria || '').toLowerCase().includes(cat.id)).length;
+
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => setSelectedCategory(cat.id)}
+                        className={`px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-all border ${
+                          isActive
+                            ? 'bg-[#E0F2FE] text-[#0284C7] border-[#BAE6FD] shadow-sm'
+                            : 'bg-white text-[#64748B] border-[#E2E8F0] hover:bg-[#F1F5F9] hover:text-[#0F172A]'
+                        }`}
+                      >
+                        <span>{cat.icon}</span>
+                        <span>{cat.nombre}</span>
+                        <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${isActive ? 'bg-[#0284C7] text-white' : 'bg-[#E2E8F0] text-[#64748B]'}`}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* GRID DE PRODUCTOS DE ALTA CONVERSIÓN */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {filteredProducts.map(product => {
+                  const pricePrev = product.precioAnterior;
+                  return (
+                    <div 
+                      key={product.id}
+                      className="bg-white border border-[#E2E8F0] p-4 rounded-[20px] shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex flex-col justify-between transition-all hover:shadow-md hover:border-[#BAE6FD] relative"
+                    >
+                      <div className="w-full h-32 bg-white rounded-xl overflow-hidden mb-3 flex items-center justify-center p-2">
+                        <img src={product.imagen} alt={product.nombre} className="max-h-full max-w-full object-contain" />
+                      </div>
+
+                      <div>
+                        <h4 className="font-bold text-xs text-[#0F172A] line-clamp-2 leading-snug">{product.nombre}</h4>
+                        <span className="text-[11px] text-[#64748B] block mt-0.5">{product.categoria}</span>
+                      </div>
+
+                      <div className="flex items-end justify-between pt-3 mt-2 border-t border-[#F1F5F9]">
+                        <div>
+                          <span className="font-bold text-sm text-[#0F172A] block">RD$ {product.precio}</span>
+                          {pricePrev && <span className="text-[10px] text-[#EF4444] line-through font-normal">RD$ {pricePrev}</span>}
+                        </div>
+
+                        <button 
+                          onClick={() => addToCart(product)}
+                          className="w-8 h-8 rounded-full bg-white border border-[#FEE2E2] shadow-sm flex items-center justify-center text-[#EF4444] font-bold text-lg hover:bg-[#FEF2F2] hover:scale-105 active:scale-95 transition-all"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+            </main>
+
+            {/* BOTÓN FLOTANTE PRINCIPAL: SOLICITAR PEDIDO AL COLMADO */}
+            {cartCount > 0 && (
+              <div className="fixed bottom-0 inset-x-0 bg-white border-t border-[#E2E8F0] p-4 z-40 shadow-2xl">
+                <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+                  <div>
+                    <span className="text-xs font-bold text-[#64748B] block">TU PEDIDO:</span>
+                    <span className="font-extrabold text-lg text-[#0284C7]">{cartCount} ítems • RD$ {cartTotal.toFixed(2)}</span>
+                  </div>
+
+                  <button
+                    onClick={() => setShowOrderModal(true)}
+                    className="px-6 py-3.5 bg-[#0284C7] hover:bg-[#0369A1] text-white font-bold text-xs sm:text-sm rounded-full shadow-lg shadow-[#0284C7]/25 flex items-center gap-2 transition-all"
+                  >
+                    <span>📲 Solicitar Pedido al Colmado</span>
+                    <span>→</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* MODAL DE CONFIRMACIÓN Y ENVÍO DE PEDIDO (CORREGIDO PARA CUALQUIER PANTALLA) */}
+            {showOrderModal && (
+              <div className="fixed inset-0 z-50 bg-[#0F172A]/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+                <div className="bg-white max-w-md w-full my-auto rounded-[24px] shadow-2xl border border-[#E2E8F0] flex flex-col max-h-[90vh] overflow-hidden animate-fade-in-up">
+                  
+                  {/* HEADER PEGAJOSO DEL MODAL */}
+                  <div className="p-4 sm:p-5 border-b border-[#F1F5F9] flex items-center justify-between bg-white sticky top-0 z-20">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">🛒</span>
+                      <h3 className="font-extrabold text-base text-[#0F172A]">Solicitar Pedido a Domicilio</h3>
+                    </div>
+                    <button onClick={() => setShowOrderModal(false)} className="w-8 h-8 rounded-full bg-[#F1F5F9] text-gray-500 hover:text-gray-900 font-bold text-sm flex items-center justify-center">✕</button>
+                  </div>
+
+                  {/* CUERPO DEL MODAL CON SCROLL INTERNO INDEPENDIENTE */}
+                  <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+                    
+                    {/* RESUMEN DE COMPRA */}
+                    <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-3.5 rounded-2xl max-h-32 overflow-y-auto space-y-2 text-xs">
+                      {cart.map(item => (
+                        <div key={item.id} className="flex justify-between items-center">
+                          <span className="font-bold text-[#0F172A]">{item.qty}x {item.nombre}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#64748B]">RD$ {(item.precio * item.qty).toFixed(2)}</span>
+                            <button onClick={() => updateCartQty(item.id, -1)} className="text-[#EF4444] font-bold">✕</button>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="pt-2 border-t border-[#E2E8F0] flex justify-between font-extrabold text-sm text-[#0284C7]">
+                        <span>TOTAL:</span>
+                        <span>RD$ {cartTotal.toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    {/* FORMULARIO DE DATOS DEL CLIENTE CON PERSISTENCIA Y CAMBIO DE UBICACIÓN */}
+                    <form id="orderForm" onSubmit={handleSendOrderToColmado} className="space-y-3">
+                      
+                      {savedProfile && !isEditingProfile ? (
+                        /* TARJETA DE PERFIL GUARDADO (CONFIGURADO UNA SOLA VEZ) */
+                        <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-3.5 rounded-2xl space-y-2 text-xs animate-fade-in-up">
+                          <div className="flex items-center justify-between">
+                            <span className="font-extrabold text-[#0F172A] text-sm">👤 {customerName}</span>
+                            <button 
+                              type="button" 
+                              onClick={() => setIsEditingProfile(true)}
+                              className="text-[11px] font-bold text-[#0284C7] hover:underline"
+                            >
+                              ✏️ Editar Mis Datos
+                            </button>
+                          </div>
+                          <p className="text-[#64748B] font-mono text-[11px]">📞 {customerPhone}</p>
+
+                          <div className="pt-2 border-t border-[#E2E8F0] space-y-1">
+                            <span className="text-[10px] font-bold uppercase text-[#64748B] block">Dirección de Entrega:</span>
+                            <p className="font-bold text-[#0F172A]">
+                              📍 {useAlternateAddress && alternateAddress.trim() ? alternateAddress : customerAddress}
+                              {useAlternateAddress && <span className="text-[10px] text-[#0284C7] ml-1 font-semibold">(Ubicación Temporal)</span>}
+                            </p>
+                          </div>
+
+                          {/* BOTÓN TOGGLE PARA CAMBIAR UBICACIÓN TEMPORAL (POR SI ESTÁ EN OTRO LUGAR HOBITUAL) */}
+                          <div className="pt-1">
+                            <button
+                              type="button"
+                              onClick={() => setUseAlternateAddress(!useAlternateAddress)}
+                              className="w-full py-1.5 px-3 rounded-xl text-[11px] font-bold bg-[#E0F2FE] text-[#0369A1] border border-[#BAE6FD] hover:bg-[#BAE6FD] transition-all flex items-center justify-center gap-1"
+                            >
+                              <span>📍</span>
+                              <span>{useAlternateAddress ? 'Usar Mi Dirección Habitual' : 'Cambiar Ubicación para Este Pedido'}</span>
+                            </button>
+                          </div>
+
+                          {/* INPUT PARA DIRECCIÓN TEMPORAL */}
+                          {useAlternateAddress && (
+                            <div className="pt-1 animate-fade-in-up">
+                              <label className="block text-[10px] font-bold uppercase text-[#0369A1] mb-1">Escribe la ubicación actual / temporal *</label>
+                              <input 
+                                type="text"
+                                required={useAlternateAddress}
+                                placeholder="Ej: Oficina Nivel 3 / Casa de un amigo"
+                                value={alternateAddress}
+                                onChange={(e) => setAlternateAddress(e.target.value)}
+                                className="w-full bg-white border border-[#BAE6FD] rounded-xl px-3 py-2 text-xs font-semibold text-[#0F172A]"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        /* FORMULARIO INICIAL DE CONFIGURACIÓN DE DATOS (SOLO SE HACE UNA VEZ) */
+                        <div className="space-y-3 bg-[#F8FAFC] border border-[#E2E8F0] p-3.5 rounded-2xl">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#0284C7]">Configura tus datos de entrega</span>
+                            {savedProfile && (
+                              <button type="button" onClick={() => setIsEditingProfile(false)} className="text-[10px] font-bold text-[#64748B]">Cancelar</button>
+                            )}
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase text-[#64748B] mb-1">Tu Nombre Completo *</label>
+                            <input 
+                              type="text" 
+                              required
+                              placeholder="Ej: Juan Pérez"
+                              value={customerName}
+                              onChange={(e) => setCustomerName(e.target.value)}
+                              className="w-full bg-white border border-[#E2E8F0] rounded-xl px-3.5 py-2 text-xs font-semibold text-[#0F172A]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase text-[#64748B] mb-1">Teléfono WhatsApp *</label>
+                            <input 
+                              type="tel" 
+                              required
+                              placeholder="Ej: 8095550100"
+                              value={customerPhone}
+                              onChange={(e) => setCustomerPhone(e.target.value)}
+                              className="w-full bg-white border border-[#E2E8F0] rounded-xl px-3.5 py-2 text-xs font-semibold text-[#0F172A]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase text-[#64748B] mb-1">Dirección de Entrega Habitual *</label>
+                            <input 
+                              type="text" 
+                              required
+                              placeholder="Ej: Calle 16 de Agosto #45, Apt 2B"
+                              value={customerAddress}
+                              onChange={(e) => setCustomerAddress(e.target.value)}
+                              className="w-full bg-white border border-[#E2E8F0] rounded-xl px-3.5 py-2 text-xs font-semibold text-[#0F172A]"
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-1">
+                            <input 
+                              type="checkbox"
+                              id="saveProfileCheck"
+                              checked={saveForFuture}
+                              onChange={(e) => setSaveForFuture(e.target.checked)}
+                              className="rounded accent-[#0284C7]"
+                            />
+                            <label htmlFor="saveProfileCheck" className="text-[11px] font-bold text-[#0F172A]">
+                              💾 Guardar mis datos para no ingresarlos en el próximo pedido
+                            </label>
+                          </div>
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase text-[#64748B] mb-1">Forma de Pago</label>
+                        <select 
+                          value={paymentMethod}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                          className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-3.5 py-2 text-xs font-bold text-[#0F172A]"
+                        >
+                          <option value="Efectivo">💵 Efectivo a la entrega</option>
+                          <option value="Tarjeta">💳 Tarjeta (POS Móvil)</option>
+                          <option value="Transferencia">📲 Transferencia Banco / QIK</option>
+                        </select>
+                      </div>
+
+                      {/* CAMPO DE DEVUELTA EN EFECTIVO (PARA EL REPARTIDOR) */}
+                      {paymentMethod === 'Efectivo' && (
+                        <div className="bg-[#E0F2FE]/50 border border-[#BAE6FD] p-3 rounded-2xl space-y-2 animate-fade-in-up">
+                          <label className="block text-[11px] font-bold text-[#0369A1]">
+                            💵 ¿Con cuánto vas a pagar? (Devuelta para el delivery)
+                          </label>
+                          <input 
+                            type="number"
+                            value={cashPagarCon}
+                            onChange={(e) => setCashPagarCon(e.target.value)}
+                            placeholder="Ej: 1000"
+                            className="w-full bg-white border border-[#BAE6FD] rounded-xl px-3.5 py-2 text-xs font-bold text-[#0F172A]"
+                          />
+
+                          {/* ATACADAS RÁPIDAS DE BILLETES */}
+                          <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                            {[500, 1000, 2000].map(val => (
+                              <button
+                                key={val}
+                                type="button"
+                                onClick={() => setCashPagarCon(val.toString())}
+                                className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all border ${
+                                  cashVal === val ? 'bg-[#0284C7] text-white border-[#0284C7]' : 'bg-white text-[#0369A1] border-[#BAE6FD]'
+                                }`}
+                              >
+                                RD$ {val}
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => setCashPagarCon(cartTotal.toString())}
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all border ${
+                                cashVal === cartTotal ? 'bg-[#0284C7] text-white border-[#0284C7]' : 'bg-white text-[#0369A1] border-[#BAE6FD]'
+                              }`}
+                            >
+                              Monto Exacto
+                            </button>
+                          </div>
+
+                          {/* INFORMACIÓN CALCULADA DE DEVUELTA */}
+                          <div className="text-[11px] font-bold text-[#0369A1] pt-1">
+                            {devueltaMonto > 0 ? (
+                              <span>💡 El delivery debe llevar <strong className="text-[#15803D]">RD$ {devueltaMonto.toFixed(2)}</strong> de devuelta.</span>
+                            ) : cashVal === cartTotal ? (
+                              <span className="text-[#15803D]">✨ Llevarás el monto exacto (sin devuelta).</span>
+                            ) : (
+                              <span className="text-[#B91C1C]">⚠️ El monto ingresado es menor al total del pedido.</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </form>
+
+                  </div>
+
+                  {/* PIE DE PÁGINA PEGAJOSO CON BOTÓN PRINCIPAL SIEMPRE VISIBLE */}
+                  <div className="p-4 border-t border-[#F1F5F9] bg-white sticky bottom-0 z-20 shadow-lg">
+                    <button
+                      type="submit"
+                      form="orderForm"
+                      disabled={isSubmitting}
+                      className="w-full py-3.5 bg-[#0284C7] hover:bg-[#0369A1] text-white font-bold text-xs uppercase tracking-wider rounded-full shadow-lg shadow-[#0284C7]/20 flex items-center justify-center gap-2 transition-all active:scale-95"
+                    >
+                      <span>🚀 Enviar Pedido al Colmado</span>
+                    </button>
+                  </div>
+
+                </div>
+              </div>
+            )}
+
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById('catalog-app-root')).render(<StandaloneCustomerCatalog />);
+    </script>
+</body>
+</html>

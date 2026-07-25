@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYSPIM MARKET - Rediseño POS Anti-Gravity</title>
+    <meta name="description" content="SYSPIM MARKET: Sistema POS de alta conversión para colmados con arquitectura multi-tenant y diseño anti-gravedad.">
+    <link rel="shortcut icon" href="public/favicon.ico" type="image/x-icon">
+    
+    <!-- Anti-Gravity Distinctive Fonts (Google Fonts) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Outfit:wght@100;200;300;700;800;900&family=Space+Grotesk:wght@300;500;700;900&family=JetBrains+Mono:wght@400;700;800&family=Plus+Jakarta+Sans:wght@200;300;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              saas: {
+                bg: '#F8FAFC',
+                card: '#FFFFFF',
+                elevated: '#F1F5F9',
+                border: '#E2E8F0',
+                text: '#0F172A',
+                muted: '#64748B',
+                primary: '#0284C7',
+                hover: '#0369A1',
+                pillBg: '#E0F2FE',
+                actionRed: '#EF4444',
+                success: '#15803D',
+                warning: '#B45309',
+                error: '#B91C1C',
+                info: '#0369A1',
+              }
+            },
+            fontFamily: {
+              jakarta: ['"Plus Jakarta Sans"', 'sans-serif'],
+              syne: ['"Plus Jakarta Sans"', 'sans-serif'],
+              outfit: ['"Outfit"', 'sans-serif'],
+              mono: ['"JetBrains Mono"', 'monospace'],
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- Custom Distilled Aesthetics & Anti-Gravity Styles -->
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- React 18 & ReactDOM CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <!-- Babel Standalone for JSX compilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-[#040a07] text-slate-100 font-jakarta min-h-screen antialiased selection:bg-amber-500 selection:text-slate-950">
+
+    <!-- REACT APPLICATION ROOT -->
+    <div id="root"></div>
+
+    <!-- CONTENEDOR OCULTO PARA IMPRESIÓN TÉRMICA (58mm/80mm) -->
+    <div id="thermal-receipt" class="printable-receipt" aria-hidden="true">
+        <div class="receipt-header">
+            <h2 id="receipt-biz-name" class="receipt-title">SYSPIM MARKET</h2>
+            <p id="receipt-biz-address" class="receipt-meta">Santo Domingo, República Dominicana</p>
+            <p id="receipt-biz-phone" class="receipt-meta">Tel: 809-555-0100</p>
+            <p id="receipt-meta-info" class="receipt-meta">----------------------------------</p>
+        </div>
+
+        <div id="receipt-customer-info" class="receipt-customer-box">
+            <!-- Info del cliente inyectada dinámicamente -->
+        </div>
+
+        <table class="receipt-items-table">
+            <thead>
+                <tr>
+                    <th style="width: 15%;">CANT</th>
+                    <th style="width: 55%;">DESCRIPCIÓN</th>
+                    <th style="width: 30%; text-align: right;">TOTAL</th>
+                </tr>
+            </thead>
+            <tbody id="receipt-items-list">
+                <!-- Lista de productos inyectada dinámicamente -->
+            </tbody>
+        </table>
+
+        <div id="receipt-totals" class="receipt-totals-box">
+            TOTAL: RD$ 0.00
+        </div>
+
+        <div class="receipt-token-box ticket-token">
+            <div class="receipt-token-title">CÓDIGO REPARTIDOR / DELIVERY TOKEN</div>
+            <div id="receipt-delivery-token" class="receipt-token-code">DEL-000000</div>
+        </div>
+    </div>
+
+    <!-- SUPABASE JS CLIENT CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- CONFIGURACIÓN Y UTILIDADES -->
+    <script src="src/config/supabase.js"></script>
+    <script src="src/utils/helpers.js"></script>
+
+    <!-- MÓDULOS DEL NÚCLEO -->
+    <script src="src/modules/admin/admin.js"></script>
+    <script src="src/modules/catalog/catalog.js"></script>
+    <script src="src/modules/delivery/delivery.js"></script>
+    <script src="src/modules/superadmin/superadmin.js"></script>
+
+    <!-- REACT APP SCRIPT -->
+    <script type="text/babel" src="src/app.js"></script>
+</body>
+</html>

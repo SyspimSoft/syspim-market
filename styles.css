@@ -1,0 +1,356 @@
+/* ==========================================================================
+   SYSPIM MARKET - CLEAN LIGHT RETAIL DESIGN SYSTEM (ARCA / SUPERMERCADOS BRAVO INSPIRED)
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;600;700&display=swap');
+
+:root {
+  /* Fondo principal */
+  --bg-main: #F8FAFC;
+
+  /* Superficies (Cards) */
+  --surface-card: #FFFFFF;
+  --surface-elevated: #F1F5F9;
+
+  /* Bordes */
+  --border-color: #E2E8F0;
+
+  /* Texto */
+  --text-main: #0F172A;
+  --text-secondary: #64748B;
+
+  /* Primario (Cyan / Teal Retail) */
+  --primary-color: #0284C7;
+  --primary-hover: #0369A1;
+
+  /* Botón de Acción (+) */
+  --action-red: #EF4444;
+
+  /* Estados */
+  --state-success: #15803D;
+  --state-warning: #B45309;
+  --state-error: #B91C1C;
+  --state-info: #0369A1;
+
+  /* Transición estándar */
+  --transition-fast: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body {
+  background-color: var(--bg-main) !important;
+  color: var(--text-main) !important;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Background Soft Glow */
+.mesh-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  opacity: 0.25;
+}
+
+.mesh-blob-1 {
+  position: absolute;
+  top: -10%;
+  left: 25%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(224, 242, 254, 0.8) 0%, rgba(255,255,255,0) 70%);
+  filter: blur(80px);
+}
+
+.mesh-blob-2 {
+  position: absolute;
+  bottom: -10%;
+  right: 15%;
+  width: 650px;
+  height: 650px;
+  background: radial-gradient(circle, rgba(207, 250, 254, 0.6) 0%, rgba(255,255,255,0) 70%);
+  filter: blur(90px);
+}
+
+/* Typography Classes */
+.font-syne, .font-jakarta { font-family: 'Plus Jakarta Sans', sans-serif; }
+.font-outfit { font-family: 'Outfit', sans-serif; }
+.font-mono-tabular { 
+  font-family: 'JetBrains Mono', monospace; 
+  font-variant-numeric: tabular-nums;
+}
+
+/* Clean Cards (Arca / Bravo Style) */
+.saas-card, .glass-card, .glass-panel {
+  background-color: var(--surface-card) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+  transition: var(--transition-fast) !important;
+}
+
+.saas-card-elevated, .glass-panel-elevated {
+  background-color: var(--surface-card) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Botones Retail */
+.btn-primary {
+  background-color: var(--primary-color) !important;
+  color: #ffffff !important;
+  border: 1px solid transparent !important;
+  border-radius: 14px !important;
+  font-weight: 700 !important;
+  transition: var(--transition-fast) !important;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover) !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3) !important;
+}
+
+.btn-secondary {
+  background-color: #E0F2FE !important;
+  border: 1px solid #BAE6FD !important;
+  color: #0369A1 !important;
+  border-radius: 14px !important;
+  font-weight: 700 !important;
+  transition: var(--transition-fast) !important;
+}
+
+.btn-secondary:hover {
+  background-color: #BAE6FD !important;
+  color: #0284C7 !important;
+}
+
+.btn-danger {
+  background-color: #FEE2E2 !important;
+  color: #DC2626 !important;
+  border: 1px solid #FECACA !important;
+  border-radius: 14px !important;
+  font-weight: 700 !important;
+  transition: var(--transition-fast) !important;
+}
+
+.btn-danger:hover {
+  background-color: #EF4444 !important;
+  color: #ffffff !important;
+}
+
+/* Inputs */
+input, select, textarea {
+  background-color: #FFFFFF !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-main) !important;
+  border-radius: 16px !important;
+  transition: var(--transition-fast) !important;
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--text-secondary) !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none !important;
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+}
+
+/* Badges Soft Pills */
+.badge-success {
+  background-color: #DCFCE7 !important;
+  color: var(--state-success) !important;
+  border: 1px solid #BBF7D0 !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+}
+
+.badge-warning {
+  background-color: #FEF3C7 !important;
+  color: var(--state-warning) !important;
+  border: 1px solid #FDE68A !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+}
+
+.badge-error {
+  background-color: #FEE2E2 !important;
+  color: var(--state-error) !important;
+  border: 1px solid #FECACA !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+}
+
+.badge-info {
+  background-color: #E0F2FE !important;
+  color: var(--state-info) !important;
+  border: 1px solid #BAE6FD !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+}
+
+/* Modern Tables Light */
+table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  width: 100% !important;
+}
+
+th {
+  color: var(--text-secondary) !important;
+  font-weight: 700 !important;
+  font-size: 0.75rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  padding: 14px 16px !important;
+  background-color: #F8FAFC !important;
+}
+
+td {
+  padding: 16px !important;
+  border-bottom: 1px solid #F1F5F9 !important;
+  color: var(--text-main) !important;
+}
+
+tr:hover td {
+  background-color: #F8FAFC !important;
+  transition: var(--transition-fast) !important;
+}
+
+/* Microanimations 200ms */
+* {
+  transition-property: color, background-color, border-color, box-shadow, transform;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Custom Scrollbar Light */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-main);
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* ==========================================================================
+   IMPRESIÓN TÉRMICA DE RECIBOS (58mm / 80mm) - REGISTRO DE CAJA POS
+   ========================================================================== */
+
+#thermal-receipt {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 0;
+    size: 80mm auto;
+  }
+
+  *, *::before, *::after {
+    background: transparent !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important;
+  }
+
+  body > *:not(#thermal-receipt) {
+    display: none !important;
+  }
+
+  #thermal-receipt {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 78mm !important;
+    margin: 0 auto !important;
+    padding: 3mm !important;
+    font-size: 11px;
+    line-height: 1.25;
+    color: #000000 !important;
+  }
+
+  #thermal-receipt .receipt-header {
+    text-align: center;
+    border-bottom: 1px dashed #000;
+    padding-bottom: 6px;
+    margin-bottom: 6px;
+  }
+
+  #thermal-receipt .receipt-title {
+    font-size: 16px;
+    font-weight: 900;
+    text-transform: uppercase;
+    margin: 0 0 2px 0;
+  }
+
+  #thermal-receipt .receipt-meta {
+    font-size: 10px;
+    color: #000 !important;
+  }
+
+  #thermal-receipt .receipt-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin: 6px 0 !important;
+  }
+
+  #thermal-receipt .receipt-table th {
+    border-bottom: 1px solid #000 !important;
+    text-align: left;
+    padding: 2px 0 !important;
+    font-size: 10px;
+    color: #000 !important;
+  }
+
+  #thermal-receipt .receipt-table td {
+    padding: 3px 0 !important;
+    border-bottom: 1px dotted #ccc !important;
+    font-size: 10px;
+    color: #000 !important;
+  }
+
+  #thermal-receipt .receipt-total {
+    border-top: 1px solid #000;
+    padding-top: 6px;
+    margin-top: 6px;
+    text-align: right;
+    font-size: 13px;
+    font-weight: 900;
+  }
+
+  #thermal-receipt .ticket-token {
+    text-align: center;
+    margin-top: 10px;
+    padding: 6px;
+    border: 2px dashed #000;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 2px;
+  }
+}
