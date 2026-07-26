@@ -80,9 +80,10 @@
   6. Desplegable de búsqueda ampliado con alta legibilidad y eliminación de recortes en la primera letra.
   7. Impresión térmica optimizada en tickets de 80mm sin imágenes.
 * **Catálogo Digital PWA (catalog.html):**
-  1. Transformación visual al estilo Delivery GO con degradados, ubicación e insignias.
+  1. Transformación visual al estilo Delivery GO / Instacart / Bravo App con degradados, ubicación e insignias.
   2. Fijación adhesiva de la barra de búsqueda y categorías (`sticky top-0 z-30`).
-  3. Implementación del Carrito Flotante Inferior Expandible (Bottom Cart Sheet) que muestra los productos guardados con controles de incremento/decremento (`-` / `+`).
+  3. Rediseño del catálogo en **Carruseles Horizontales Seccionados por Categoría** con desplazamiento táctil `scroll-snap-x mandatory`, encabezados con botón "Ver todos" y tarjetas de producto de ancho fijo (145px - 170px) con botón flotante `+`.
+  4. Implementación del Carrito Flotante Inferior Expandible (Bottom Cart Sheet) que muestra los productos guardados con controles de incremento/decremento (`-` / `+`).
 * **Imágenes de Inventario:**
   1. Generación de imágenes oficiales de producto para *Rica Leche Listamilk Lt* y *Rica Leche Descremada Lt*.
   2. Integración de 45+ productos agrícolas a la categoría *Frutas y Vegetales*.

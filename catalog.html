@@ -393,53 +393,164 @@
                 </div>
               </div>
 
-              {/* GRID DE PRODUCTOS */}
-              <div className="space-y-3">
-                <h3 className="font-extrabold text-sm text-[#0F172A] flex items-center gap-1.5">
-                  <span>⭐ Productos Destacados</span>
-                </h3>
+              {/* SECCIONES DE CARRUSELES HORIZONTALES POR CATEGORÍA (ESTILO INSTACART / BRAVO APP) */}
+              <div className="space-y-7">
+                {(() => {
+                  // Determinar las secciones a mostrar
+                  let sectionsToShow = CATEGORIAS.filter(c => c.id !== 'todos');
+                  if (selectedCategory !== 'todos') {
+                    sectionsToShow = CATEGORIAS.filter(c => c.id === selectedCategory);
+                  }
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
-                  {filteredProducts.map(product => {
-                    const pricePrev = product.precioAnterior;
-                    const itemInCart = cart.find(i => i.id === product.id);
-
+                  if (searchQuery.trim().length > 0) {
+                    // Si el usuario está buscando, mostrar grilla filtrada
                     return (
-                      <div 
-                        key={product.id}
-                        className="bg-white border border-[#E2E8F0] p-3.5 rounded-[22px] shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col justify-between transition-all hover:shadow-md hover:border-[#BAE6FD] relative group"
-                      >
-                        <div className="w-full h-32 bg-white rounded-xl overflow-hidden mb-2.5 flex items-center justify-center p-2">
-                          <img src={product.imagen} alt={product.nombre} className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" />
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-extrabold text-sm text-[#0F172A]">
+                            🔍 Resultados para "{searchQuery}" ({filteredProducts.length})
+                          </h3>
                         </div>
 
-                        <div>
-                          <h4 className="font-extrabold text-xs text-[#0F172A] line-clamp-2 leading-snug">{product.nombre}</h4>
-                          <span className="text-[10px] font-bold text-[#64748B] bg-[#F1F5F9] px-2 py-0.5 rounded-md inline-block mt-1">{product.categoria}</span>
-                        </div>
-
-                        <div className="flex items-end justify-between pt-3 mt-2 border-t border-[#F1F5F9]">
-                          <div>
-                            <span className="font-extrabold text-sm text-[#0284C7] block font-mono-tabular">RD$ {product.precio}</span>
-                            {pricePrev && <span className="text-[10px] text-[#EF4444] line-through font-normal">RD$ {pricePrev}</span>}
+                        {filteredProducts.length === 0 ? (
+                          <div className="bg-white border border-dashed border-[#E2E8F0] p-8 rounded-2xl text-center space-y-2">
+                            <span className="text-3xl block">🥦</span>
+                            <p className="font-bold text-xs text-[#0F172A]">No se encontraron productos coincidentes</p>
+                            <p className="text-[11px] text-[#64748B]">Intente buscar por otro nombre como 'leche', 'pan' o 'jugo'.</p>
                           </div>
+                        ) : (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
+                            {filteredProducts.map(product => {
+                              const pricePrev = product.precioAnterior;
+                              const itemInCart = cart.find(i => i.id === product.id);
 
-                          <button 
-                            onClick={() => addToCart(product)}
-                            className="w-8 h-8 rounded-full bg-[#0284C7] hover:bg-[#0369A1] shadow-md shadow-[#0284C7]/20 flex items-center justify-center text-white font-bold text-base hover:scale-110 active:scale-95 transition-all relative"
-                          >
-                            +
-                            {itemInCart && (
-                              <span className="absolute -top-1 -right-1 bg-[#EF4444] text-white text-[9px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center border border-white">
-                                {itemInCart.qty}
-                              </span>
-                            )}
-                          </button>
-                        </div>
+                              return (
+                                <div 
+                                  key={product.id}
+                                  className="bg-white border border-[#E2E8F0] p-3 rounded-[20px] shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex flex-col justify-between transition-all hover:shadow-md hover:border-[#BAE6FD] relative group"
+                                >
+                                  <div className="w-full h-28 bg-[#F8FAFC] rounded-xl overflow-hidden mb-2 flex items-center justify-center p-2 border border-[#F1F5F9]">
+                                    <img src={product.imagen} alt={product.nombre} className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" />
+                                  </div>
+
+                                  <div>
+                                    <h4 className="font-extrabold text-xs text-[#0F172A] line-clamp-2 leading-snug h-8">{product.nombre}</h4>
+                                    <span className="text-[9.5px] font-bold text-[#64748B] bg-[#F1F5F9] px-2 py-0.5 rounded-md inline-block mt-1">{product.categoria}</span>
+                                  </div>
+
+                                  <div className="flex items-end justify-between pt-2 mt-2 border-t border-[#F1F5F9]">
+                                    <div>
+                                      <span className="font-extrabold text-sm text-[#0284C7] block font-mono-tabular">RD$ {product.precio}</span>
+                                      {pricePrev && <span className="text-[10px] text-[#EF4444] line-through font-normal">RD$ {pricePrev}</span>}
+                                    </div>
+
+                                    <button 
+                                      onClick={() => addToCart(product)}
+                                      className="w-8 h-8 rounded-full bg-[#0284C7] hover:bg-[#0369A1] shadow-md shadow-[#0284C7]/20 flex items-center justify-center text-white font-bold text-base hover:scale-110 active:scale-95 transition-all relative flex-shrink-0"
+                                    >
+                                      +
+                                      {itemInCart && (
+                                        <span className="absolute -top-1 -right-1 bg-[#EF4444] text-white text-[9px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center border border-white">
+                                          {itemInCart.qty}
+                                        </span>
+                                      )}
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     );
-                  })}
-                </div>
+                  }
+
+                  // Renderizado por Secciones de Carruseles Horizontales
+                  return sectionsToShow.map(cat => {
+                    const categoryProducts = products.filter(p => (p.categoria || '').toLowerCase().includes(cat.id));
+                    if (categoryProducts.length === 0) return null;
+
+                    return (
+                      <section key={cat.id} className="space-y-3 animate-fade-in-up">
+                        
+                        {/* ENCABEZADO DE SECCIÓN: TÍTULO Y BOTÓN "VER TODOS" */}
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-extrabold text-sm sm:text-base text-[#0F172A] flex items-center gap-2 font-jakarta">
+                            <span className="text-lg">{cat.icon}</span>
+                            <span>{cat.nombre}</span>
+                            <span className="text-xs text-[#64748B] font-mono font-normal">({categoryProducts.length})</span>
+                          </h3>
+
+                          {selectedCategory === 'todos' && (
+                            <button
+                              onClick={() => setSelectedCategory(cat.id)}
+                              className="text-xs font-bold text-[#0284C7] hover:text-[#0369A1] flex items-center gap-1 hover:underline"
+                            >
+                              <span>Ver todos</span>
+                              <span className="text-[10px]">→</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* LISTADO EN CARRUSEL HORIZONTAL CON SCROLL SWIPEABLE (SNAP-X MANDATORY) */}
+                        <div className="flex gap-3.5 overflow-x-auto scroll-snap-x mandatory scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:-mx-8 sm:px-8">
+                          {categoryProducts.map(product => {
+                            const pricePrev = product.precioAnterior;
+                            const itemInCart = cart.find(i => i.id === product.id);
+
+                            return (
+                              <div 
+                                key={product.id}
+                                className="w-[145px] sm:w-[170px] flex-shrink-0 scroll-snap-align-start bg-white border border-[#E2E8F0] p-3 rounded-[20px] shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex flex-col justify-between transition-all hover:shadow-md hover:border-[#BAE6FD] relative group select-none"
+                              >
+                                {/* CONTENEDOR DE IMAGEN ASPECTO 1:1 CON OBJECT-CONTAIN */}
+                                <div className="w-full h-28 sm:h-32 bg-[#F8FAFC] rounded-xl overflow-hidden mb-2 flex items-center justify-center p-2 border border-[#F1F5F9]">
+                                  <img src={product.imagen} alt={product.nombre} className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" />
+                                </div>
+
+                                {/* TÍTULO Y DETALLES */}
+                                <div>
+                                  <h4 className="font-extrabold text-xs text-[#0F172A] line-clamp-2 leading-snug h-8 font-jakarta">
+                                    {product.nombre}
+                                  </h4>
+                                </div>
+
+                                {/* PRECIO Y BOTÓN FLOTANTE (+) ACCIÓN RÁPIDA */}
+                                <div className="flex items-end justify-between pt-2 mt-2 border-t border-[#F1F5F9]">
+                                  <div>
+                                    <span className="font-extrabold text-sm sm:text-base text-[#0284C7] block font-mono-tabular">
+                                      RD$ {product.precio}
+                                    </span>
+                                    {pricePrev && (
+                                      <span className="text-[10px] text-[#EF4444] line-through font-normal block -mt-0.5">
+                                        RD$ {pricePrev}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <button 
+                                    onClick={() => addToCart(product)}
+                                    className="w-8 h-8 rounded-full bg-[#0284C7] hover:bg-[#0369A1] shadow-md shadow-[#0284C7]/20 flex items-center justify-center text-white font-bold text-base hover:scale-110 active:scale-95 transition-all relative flex-shrink-0"
+                                    title="Agregar al carrito"
+                                  >
+                                    +
+                                    {itemInCart && (
+                                      <span className="absolute -top-1 -right-1 bg-[#EF4444] text-white text-[9px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center border border-white">
+                                        {itemInCart.qty}
+                                      </span>
+                                    )}
+                                  </button>
+                                </div>
+
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                      </section>
+                    );
+                  });
+                })()}
               </div>
 
             </main>
