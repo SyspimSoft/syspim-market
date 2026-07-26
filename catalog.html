@@ -61,18 +61,88 @@
     <script type="text/babel">
       const { useState, useEffect, useMemo } = React;
 
-      // DATOS DE CATÁLOGO INICIAL
+      // CATÁLOGO COMPLETO DE PRODUCTOS (80 PRODUCTOS DE INVENTARIO)
       const PRODUCTOS_INICIALES = [
-        { id: 101, nombre: 'Rica Leche Listamilk Lt', precio: 76, precioAnterior: 78, categoria: 'Lácteos', imagen: 'public/assets/rica_leche_listamilk.png', stock: 50 },
-        { id: 102, nombre: 'Rica Leche Descremada Lt', precio: 76, categoria: 'Lácteos', imagen: 'public/assets/rica_leche_descremada.png', stock: 30 },
-        { id: 103, nombre: 'Bravo Leche Uht Entera 1Lt', precio: 59, categoria: 'Lácteos', imagen: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=400&q=80', stock: 40 },
-        { id: 104, nombre: 'Bravo Leche Uht 1.5%', precio: 59, categoria: 'Lácteos', imagen: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=400&q=80', stock: 25 },
-        { id: 105, nombre: 'Bravo Dulce De Leche 400 Gr', precio: 109, categoria: 'Dulces', imagen: 'https://images.unsplash.com/photo-1589119908995-c6837fa14848?auto=format&fit=crop&w=400&q=80', stock: 15 },
-        { id: 106, nombre: 'Rica Leche S/Lactosa Lt', precio: 82, categoria: 'Lácteos', imagen: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=400&q=80', stock: 20 },
-        { id: 107, nombre: 'Bravo Pan Viga Integral 800 Gr', precio: 99, categoria: 'Panadería', imagen: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80', stock: 18 },
-        { id: 108, nombre: 'Bravo Salsa Pasta Bolognesa 14Oz', precio: 179, categoria: 'Abarrotes', imagen: 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=400&q=80', stock: 12 },
-        { id: 109, nombre: 'Huevos Frescos Cartón 30 Unid', precio: 195, categoria: 'Fresco', imagen: 'https://images.unsplash.com/photo-1516448620398-c5f44bf9f441?auto=format&fit=crop&w=400&q=80', stock: 10 },
-        { id: 110, nombre: 'Refresco Coca-Cola 2 Litros', precio: 95, categoria: 'Bebidas', imagen: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=400&q=80', stock: 35 }
+        { id: "prod_001", nombre: "Rica Leche Listamilk Lt", precio: 76, precioAnterior: 78, categoria: "Lácteos", imagen: "public/assets/rica_leche_listamilk.png", stock: 45 },
+        { id: "prod_002", nombre: "Rica Leche Descremada Lt", precio: 76, precioAnterior: null, categoria: "Lácteos", imagen: "public/assets/rica_leche_descremada.png", stock: 30 },
+        { id: "prod_003", nombre: "Bravo Leche Uht Entera 1Lt", precio: 59, precioAnterior: null, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=400&q=80", stock: 50 },
+        { id: "prod_004", nombre: "Bravo Leche Uht 1.5% 1Lt", precio: 49, precioAnterior: 52, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=400&q=80", stock: 24 },
+        { id: "prod_005", nombre: "Bravo Dulce De Leche 400 Gr", precio: 139, precioAnterior: null, categoria: "Dulces y caramelos", imagen: "https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=400&q=80", stock: 18 },
+        { id: "prod_006", nombre: "Rica Leche S/ Lactosa Lt", precio: 79, precioAnterior: null, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=400&q=80", stock: 35 },
+        { id: "prod_007", nombre: "Parmalat Leche Entera 1 Lt", precio: 75, precioAnterior: 86, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=400&q=80", stock: 40 },
+        { id: "prod_008", nombre: "Rica Leche Semi Descremada Lt", precio: 76, precioAnterior: null, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=400&q=80", stock: 20 },
+        { id: "prod_009", nombre: "Parmalat Leche Semidescremada Lt", precio: 75, precioAnterior: 86, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=400&q=80", stock: 25 },
+        { id: "prod_010", nombre: "Rica Leche Listamilk 250 Ml", precio: 30, precioAnterior: null, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=400&q=80", stock: 60 },
+        { id: "prod_011", nombre: "Parmalat Leche Descremada 1 Lt", precio: 75, precioAnterior: 86, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=400&q=80", stock: 15 },
+        { id: "prod_012", nombre: "Bravo Leche Uht Descremada", precio: 49, precioAnterior: null, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=400&q=80", stock: 30 },
+        { id: "prod_013", nombre: "Bravo Leche Uht Entera S/L (Botella)", precio: 69, precioAnterior: null, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=400&q=80", stock: 22 },
+        { id: "prod_014", nombre: "Parmalat Leche Zimil Baja Lactosa", precio: 98, precioAnterior: null, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=400&q=80", stock: 18 },
+        { id: "prod_015", nombre: "Bravo Leche Uht Descremada (Botella)", precio: 55, precioAnterior: null, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=400&q=80", stock: 14 },
+        { id: "prod_016", nombre: "Rica Leche Sin Lactosa 0 % Grasa", precio: 79, precioAnterior: 84, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=400&q=80", stock: 35 },
+        { id: "prod_017", nombre: "Bravo Leche Condensada", precio: 109, precioAnterior: null, categoria: "Dulces y caramelos", imagen: "https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=400&q=80", stock: 40 },
+        { id: "prod_018", nombre: "Ia Leche Corporal Proteinas", precio: 179, precioAnterior: null, categoria: "Higiene y salud", imagen: "https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=400&q=80", stock: 12 },
+        { id: "prod_019", nombre: "Caf Tres Leches", precio: 139, precioAnterior: null, categoria: "Dulces y caramelos", imagen: "https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=400&q=80", stock: 15 },
+        { id: "prod_020", nombre: "Carnation Leche Evaporada", precio: 69, precioAnterior: null, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=400&q=80", stock: 80 },
+        { id: "prod_021", nombre: "Nido Leche Crecimiento", precio: 315, precioAnterior: null, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80", stock: 25 },
+        { id: "prod_022", nombre: "Parmalat Leche Con Avena Lt", precio: 124, precioAnterior: null, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=400&q=80", stock: 16 },
+        { id: "prod_023", nombre: "Bravo Chocolate Con Leche", precio: 129, precioAnterior: null, categoria: "Dulces y caramelos", imagen: "https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=400&q=80", stock: 22 },
+        { id: "prod_024", nombre: "Bravo Leche Evaporada 315 Ml", precio: 44, precioAnterior: 52, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=400&q=80", stock: 65 },
+        { id: "prod_025", nombre: "Bravo Crema Leche 200 Ml", precio: 64, precioAnterior: null, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=400&q=80", stock: 28 },
+        { id: "prod_026", nombre: "Bravo Crema Leche 1 L", precio: 279, precioAnterior: null, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=400&q=80", stock: 10 },
+        { id: "prod_027", nombre: "Bravo Leche Evaporada 1 Lt", precio: 159, precioAnterior: null, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=400&q=80", stock: 35 },
+        { id: "prod_028", nombre: "Bravo Leche Evaporada 200 Ml", precio: 36, precioAnterior: null, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=400&q=80", stock: 50 },
+        { id: "prod_029", nombre: "Bravo Leche Coco 10,5 Oz", precio: 60, precioAnterior: null, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1547514701-42782101795e?auto=format&fit=crop&w=400&q=80", stock: 35 },
+        { id: "prod_030", nombre: "Mubravo Mozzarella", precio: 259, precioAnterior: null, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1452195100486-9cc805987862?auto=format&fit=crop&w=400&q=80", stock: 10 },
+        { id: "prod_031", nombre: "Bravo Leche Uht Proteina", precio: 99, precioAnterior: null, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=400&q=80", stock: 25 },
+        { id: "prod_032", nombre: "La Famosa Leche Coco 1...", precio: 139, precioAnterior: null, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1547514701-42782101795e?auto=format&fit=crop&w=400&q=80", stock: 18 },
+        { id: "prod_033", nombre: "Pan Leche Y Vainilla 8 Und", precio: 89, precioAnterior: null, categoria: "Dulces y caramelos", imagen: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=400&q=80", stock: 20 },
+        { id: "prod_034", nombre: "Milex Leche Refill 1500 Gr", precio: 1424, precioAnterior: null, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80", stock: 15 },
+        { id: "prod_035", nombre: "Nido Leche Fortificada 2200 Gr", precio: 1639, precioAnterior: 1784, categoria: "Lácteos", imagen: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80", stock: 12 },
+        { id: "prod_036", nombre: "Repollo Morado Criollo", precio: 59, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1594282486552-05b4d80fbb9f?auto=format&fit=crop&w=400&q=80", stock: 25 },
+        { id: "prod_037", nombre: "Manzana Rockit 12/2 Lb", precio: 349, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=400&q=80", stock: 20 },
+        { id: "prod_038", nombre: "Picadillo De Vegetales (lsw)", precio: 89, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=400&q=80", stock: 30 },
+        { id: "prod_039", nombre: "Manzana Granny Imp 3 Lb", precio: 299, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1619546813926-a78fa6372ce2?auto=format&fit=crop&w=400&q=80", stock: 18 },
+        { id: "prod_040", nombre: "Ajo Desgranado Lb", precio: 119, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1540148426945-6cf22a6b2383?auto=format&fit=crop&w=400&q=80", stock: 40 },
+        { id: "prod_041", nombre: "Melon Cantaloupe Und", precio: 129, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1571575173700-afb9492e6a50?auto=format&fit=crop&w=400&q=80", stock: 15 },
+        { id: "prod_042", nombre: "Aji Gustoso Paq.", precio: 89, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?auto=format&fit=crop&w=400&q=80", stock: 35 },
+        { id: "prod_043", nombre: "Piña Md2 Un Porcionada", precio: 139, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1550258987-190a2d41a8ba?auto=format&fit=crop&w=400&q=80", stock: 22 },
+        { id: "prod_044", nombre: "Naranja Agria Lb", precio: 54, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1534531141161-e41d1341d1de?auto=format&fit=crop&w=400&q=80", stock: 50 },
+        { id: "prod_045", nombre: "Albahaca Verde Clamshell", precio: 69, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1608683273678-854746f3a3d5?auto=format&fit=crop&w=400&q=80", stock: 15 },
+        { id: "prod_046", nombre: "Manzana Gala Org Imp 2 Lb", precio: 339, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=400&q=80", stock: 12 },
+        { id: "prod_047", nombre: "Pepino Mini Crunch", precio: 49, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1449300079323-02e209d9d3a6?auto=format&fit=crop&w=400&q=80", stock: 28 },
+        { id: "prod_048", nombre: "Ciruela Fresca Imp Lb", precio: 199, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1521997888043-aa9c827744f8?auto=format&fit=crop&w=400&q=80", stock: 20 },
+        { id: "prod_049", nombre: "Espinaca Verde Imp 10 Oz", precio: 209, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=400&q=80", stock: 18 },
+        { id: "prod_050", nombre: "Perejil Liso Emp", precio: 44, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1608683273678-854746f3a3d5?auto=format&fit=crop&w=400&q=80", stock: 30 },
+        { id: "prod_051", nombre: "Blueberries Imp 4.4 Oz", precio: 219, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1498557850523-fd3d118b962e?auto=format&fit=crop&w=400&q=80", stock: 25 },
+        { id: "prod_052", nombre: "Espinaca Criolla Emp", precio: 42, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=400&q=80", stock: 32 },
+        { id: "prod_053", nombre: "Berro Emp", precio: 44, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1608683273678-854746f3a3d5?auto=format&fit=crop&w=400&q=80", stock: 20 },
+        { id: "prod_054", nombre: "Romero", precio: 59, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1608683273678-854746f3a3d5?auto=format&fit=crop&w=400&q=80", stock: 15 },
+        { id: "prod_055", nombre: "Classic Sal Espinaca Baby Org", precio: 319, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=400&q=80", stock: 10 },
+        { id: "prod_056", nombre: "Hongo Champiñón Rebanado", precio: 325, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1504470695779-75300268aa0e?auto=format&fit=crop&w=400&q=80", stock: 14 },
+        { id: "prod_057", nombre: "Cebolla Roja Imp Lb", precio: 149, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1618512496248-a07fe83aa8cf?auto=format&fit=crop&w=400&q=80", stock: 40 },
+        { id: "prod_058", nombre: "Rábano Rojo Lb", precio: 79, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1593105544559-ecb03bf76f82?auto=format&fit=crop&w=400&q=80", stock: 22 },
+        { id: "prod_059", nombre: "Hongo Champiñón Cesta", precio: 319, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1504470695779-75300268aa0e?auto=format&fit=crop&w=400&q=80", stock: 12 },
+        { id: "prod_060", nombre: "Manzana Fuji Imp 3 Lb", precio: 269, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=400&q=80", stock: 18 },
+        { id: "prod_061", nombre: "Cúrcuma Org. Lb", precio: 99, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=400&q=80", stock: 30 },
+        { id: "prod_062", nombre: "Lechuga Corazón De Romana", precio: 154, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?auto=format&fit=crop&w=400&q=80", stock: 25 },
+        { id: "prod_063", nombre: "Pico De Gallo Un (lswp)", precio: 89, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1590779033100-9f60a05a013d?auto=format&fit=crop&w=400&q=80", stock: 16 },
+        { id: "prod_064", nombre: "Sazón Natural Und", precio: 199, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1590779033100-9f60a05a013d?auto=format&fit=crop&w=400&q=80", stock: 20 },
+        { id: "prod_065", nombre: "Manzana Roja Imp 3 Lb", precio: 264, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=400&q=80", stock: 24 },
+        { id: "prod_066", nombre: "Limón Amarillo Imp Lb", precio: 135, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1534531141161-e41d1341d1de?auto=format&fit=crop&w=400&q=80", stock: 35 },
+        { id: "prod_067", nombre: "Guayaba Injerta", precio: 49, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1536511135882-7d277a0ef88f?auto=format&fit=crop&w=400&q=80", stock: 28 },
+        { id: "prod_068", nombre: "Ají Morrón Mamey Lb", precio: 74, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?auto=format&fit=crop&w=400&q=80", stock: 30 },
+        { id: "prod_069", nombre: "Manzanas Golden Delicious Lb", precio: 79, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1619546813926-a78fa6372ce2?auto=format&fit=crop&w=400&q=80", stock: 32 },
+        { id: "prod_070", nombre: "Perejil Rizado Emp", precio: 44, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1608683273678-854746f3a3d5?auto=format&fit=crop&w=400&q=80", stock: 20 },
+        { id: "prod_071", nombre: "Espinaca Hojas Paq (Glp)", precio: 149, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=400&q=80", stock: 15 },
+        { id: "prod_072", nombre: "Corazón De Romana 2 Lbs", precio: 149, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?auto=format&fit=crop&w=400&q=80", stock: 18 },
+        { id: "prod_073", nombre: "Ensalada Frutas Porcionada", precio: 149, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1519996529931-28324d5a630e?auto=format&fit=crop&w=400&q=80", stock: 20 },
+        { id: "prod_074", nombre: "Corazón De Apio Imp Und", precio: 239, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=400&q=80", stock: 12 },
+        { id: "prod_075", nombre: "Brócoli Imp Und", precio: 269, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1459411621453-7b03977f4bfc?auto=format&fit=crop&w=400&q=80", stock: 22 },
+        { id: "prod_076", nombre: "Guandules Fresco Emp", precio: 168, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1551462147-37885acc36f1?auto=format&fit=crop&w=400&q=80", stock: 14 },
+        { id: "prod_077", nombre: "Classic Sal Rúcula Org", precio: 319, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=400&q=80", stock: 10 },
+        { id: "prod_078", nombre: "Manzana Granny Org Imp 3 Lb", precio: 319, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1619546813926-a78fa6372ce2?auto=format&fit=crop&w=400&q=80", stock: 15 },
+        { id: "prod_079", nombre: "Corazón De Romana Imp Und", precio: 299, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?auto=format&fit=crop&w=400&q=80", stock: 12 },
+        { id: "prod_080", nombre: "Manzana Gala Imp 3 Lb", precio: 339, precioAnterior: null, categoria: "Frutas y Vegetales", imagen: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=400&q=80", stock: 20 }
       ];
 
       const CATEGORIAS = [
@@ -157,11 +227,42 @@
         const cashVal = parseFloat(cashPagarCon) || 0;
         const devueltaMonto = (cartTotal > 0 && cashVal > cartTotal) ? cashVal - cartTotal : 0;
 
+        const isCategoryMatch = (prodCategory, catId) => {
+          if (!catId || catId === 'todos') return true;
+          const pCat = (prodCategory || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+          const cId = catId.toLowerCase();
+
+          if (cId === 'frutas-vegetales' || cId === 'frutas') {
+            return pCat.includes('fruta') || pCat.includes('vegetal') || pCat.includes('fresco') || pCat.includes('manzana') || pCat.includes('ajo') || pCat.includes('pepino') || pCat.includes('ensalada');
+          }
+          if (cId === 'lacteos') {
+            return pCat.includes('lacteo') || pCat.includes('leche') || pCat.includes('queso') || pCat.includes('mozzarella');
+          }
+          if (cId === 'bebidas') {
+            return pCat.includes('bebida') || pCat.includes('refresco') || pCat.includes('jugo') || pCat.includes('coca');
+          }
+          if (cId === 'dulces') {
+            return pCat.includes('dulce') || pCat.includes('caramelo') || pCat.includes('chocolate') || pCat.includes('galleta');
+          }
+          if (cId === 'higiene') {
+            return pCat.includes('higiene') || pCat.includes('salud') || pCat.includes('corporal') || pCat.includes('jabón');
+          }
+          if (cId === 'panaderia') {
+            return pCat.includes('pan') || pCat.includes('panaderia');
+          }
+          if (cId === 'abarrotes') {
+            return pCat.includes('abarrote') || pCat.includes('salsa') || pCat.includes('grano') || pCat.includes('vivere') || pCat.includes('sazon');
+          }
+          return pCat.includes(cId);
+        };
+
         const filteredProducts = useMemo(() => {
           return products.filter(p => {
-            const matchesSearch = p.nombre.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesCategory = selectedCategory === 'todos' || (p.categoria || '').toLowerCase().includes(selectedCategory.toLowerCase());
-            return matchesSearch && matchesCategory;
+            const normSearch = searchQuery.trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+            const normName = (p.nombre || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+            const matchesSearch = normSearch === '' || normName.includes(normSearch);
+            const matchesCat = isCategoryMatch(p.categoria, selectedCategory);
+            return matchesSearch && matchesCat;
           });
         }, [products, searchQuery, selectedCategory]);
 
@@ -370,7 +471,7 @@
                     const isActive = selectedCategory === cat.id;
                     const count = cat.id === 'todos' 
                       ? products.length 
-                      : products.filter(p => (p.categoria || '').toLowerCase().includes(cat.id)).length;
+                      : products.filter(p => isCategoryMatch(p.categoria, cat.id)).length;
 
                     return (
                       <button
@@ -467,7 +568,7 @@
 
                   // Renderizado por Secciones de Carruseles Horizontales
                   return sectionsToShow.map(cat => {
-                    const categoryProducts = products.filter(p => (p.categoria || '').toLowerCase().includes(cat.id));
+                    const categoryProducts = products.filter(p => isCategoryMatch(p.categoria, cat.id));
                     if (categoryProducts.length === 0) return null;
 
                     return (
