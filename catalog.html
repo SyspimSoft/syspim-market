@@ -63,8 +63,8 @@
 
       // DATOS DE CATÁLOGO INICIAL
       const PRODUCTOS_INICIALES = [
-        { id: 101, nombre: 'Rica Leche Listamilk Lt', precio: 76, precioAnterior: 78, categoria: 'Lácteos', imagen: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=400&q=80', stock: 50 },
-        { id: 102, nombre: 'Rica Leche Descremada Lt', precio: 76, categoria: 'Lácteos', imagen: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=400&q=80', stock: 30 },
+        { id: 101, nombre: 'Rica Leche Listamilk Lt', precio: 76, precioAnterior: 78, categoria: 'Lácteos', imagen: 'public/assets/rica_leche_listamilk.png', stock: 50 },
+        { id: 102, nombre: 'Rica Leche Descremada Lt', precio: 76, categoria: 'Lácteos', imagen: 'public/assets/rica_leche_descremada.png', stock: 30 },
         { id: 103, nombre: 'Bravo Leche Uht Entera 1Lt', precio: 59, categoria: 'Lácteos', imagen: 'https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=400&q=80', stock: 40 },
         { id: 104, nombre: 'Bravo Leche Uht 1.5%', precio: 59, categoria: 'Lácteos', imagen: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=400&q=80', stock: 25 },
         { id: 105, nombre: 'Bravo Dulce De Leche 400 Gr', precio: 109, categoria: 'Dulces', imagen: 'https://images.unsplash.com/photo-1589119908995-c6837fa14848?auto=format&fit=crop&w=400&q=80', stock: 15 },
@@ -77,6 +77,7 @@
 
       const CATEGORIAS = [
         { id: 'todos', nombre: 'Todos los Productos', icon: '🛒' },
+        { id: 'frutas-vegetales', nombre: 'Frutas y Vegetales', icon: '🍎' },
         { id: 'lacteos', nombre: 'Lácteos', icon: '🥛' },
         { id: 'bebidas', nombre: 'Bebidas', icon: '🥤' },
         { id: 'panaderia', nombre: 'Panadería', icon: '🍞' },
@@ -115,6 +116,7 @@
         const [paymentMethod, setPaymentMethod] = useState('Efectivo');
         const [cashPagarCon, setCashPagarCon] = useState('1000');
         const [isSubmitting, setIsSubmitting] = useState(false);
+        const [isCartExpanded, setIsCartExpanded] = useState(false);
 
         // Obtener Tenant de la URL (?tenant=slug)
         const urlParams = new URLSearchParams(window.location.search);
@@ -288,87 +290,80 @@
               </div>
             )}
 
-            {/* HEADER EXCLUSIVO PARA CLIENTES (SOLO DATOS DEL COLMADO) */}
-            <header className="bg-white border-b border-[#E2E8F0] px-4 lg:px-8 py-3.5 sticky top-0 z-30 shadow-sm">
-              <div className="max-w-4xl mx-auto flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-[14px] bg-[#0284C7] text-white flex items-center justify-center font-bold text-xl shadow-md shadow-[#0284C7]/20">
-                    🏪
+            {/* HEADER ESTILO DELIVERY GO / SYSPIM MARKET */}
+            <header className="bg-gradient-to-r from-[#0284C7] to-[#0369A1] text-white px-4 lg:px-8 pt-4 pb-6 sticky top-0 z-30 shadow-md">
+              <div className="max-w-4xl mx-auto space-y-3">
+                
+                {/* FILA 1: LOGO, MARCA Y BOTONES DE NOTIFICACIÓN / PERFIL */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center font-extrabold text-lg border border-white/30">
+                      🛵
+                    </div>
+                    <div>
+                      <h1 className="font-extrabold text-base lg:text-lg tracking-tight leading-none">
+                        Delivery<span className="text-[#38BDF8]">GO</span> • {colmadoNombre}
+                      </h1>
+                      <span className="text-[10.5px] opacity-90 font-medium">Pedidos directos a domicilio</span>
+                    </div>
                   </div>
-                  <div>
-                    <h1 className="font-extrabold text-base lg:text-lg text-[#0F172A] tracking-tight">
-                      {colmadoNombre}
-                    </h1>
-                    <p className="text-[11px] text-[#64748B] font-medium">Catálogo Digital Oficial • Pedidos directos a domicilio</p>
+
+                  <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => {
+                        setIsEditingProfile(true);
+                        setShowOrderModal(true);
+                      }}
+                      className="bg-white/20 hover:bg-white/30 text-white p-2 rounded-full backdrop-blur-md transition-all text-sm border border-white/20"
+                      title="Mi Cuenta y Datos de Envío"
+                    >
+                      👤
+                    </button>
                   </div>
                 </div>
 
-                <div className="hidden sm:flex items-center gap-2 bg-[#E0F2FE] border border-[#BAE6FD] px-3.5 py-1 rounded-full text-xs font-bold text-[#0369A1]">
-                  <span>📞 809-513-1416</span>
+                {/* FILA 2: BARRA DE BÚSQUEDA REDONDEADA BLANCA */}
+                <div className="bg-white border border-[#E2E8F0] p-2.5 px-4 rounded-full shadow-lg flex items-center gap-3 text-xs sm:text-sm">
+                  <span className="text-lg text-[#0284C7]">🔍</span>
+                  <input 
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Buscar 'leche', 'pan', 'coca-cola', 'huevos'..."
+                    className="bg-transparent w-full text-[#0F172A] font-extrabold placeholder-[#94A3B8] focus:outline-none text-xs sm:text-sm"
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} className="text-xs text-[#94A3B8] hover:text-[#EF4444] font-bold pr-1">✕</button>
+                  )}
                 </div>
+
+                {/* FILA 3: UBICACIÓN Y DIRECCIÓN DE ENTREGA */}
+                <div 
+                  onClick={() => {
+                    setIsEditingProfile(true);
+                    setShowOrderModal(true);
+                  }}
+                  className="flex items-center justify-between text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-xl cursor-pointer transition-all border border-white/15"
+                >
+                  <div className="flex items-center gap-1.5 truncate pr-2">
+                    <span>📍</span>
+                    <span className="truncate font-bold text-[11.5px]">
+                      {customerAddress ? customerAddress : 'Configurar dirección de envío...'}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase opacity-80 whitespace-nowrap">Envío Programado ▾</span>
+                </div>
+
               </div>
             </header>
 
             {/* CONTENIDO PRINCIPAL DEL CATÁLOGO */}
-            <main className="max-w-4xl mx-auto w-full px-4 py-6 flex-1 space-y-5 pb-28">
+            <main className="max-w-4xl mx-auto w-full px-4 py-5 flex-1 space-y-6 pb-40">
               
-              {/* BANNER DE BIENVENIDA / AUTOCONFIGURACIÓN PARA PRIMERAS VISITAS DESDE WHATSAPP */}
-              {!savedProfile ? (
-                <div className="bg-[#E0F2FE] border border-[#BAE6FD] p-4 rounded-[20px] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm animate-fade-in-up">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">👋</span>
-                    <div>
-                      <h4 className="font-extrabold text-xs sm:text-sm text-[#0369A1]">¡Bienvenido al Catálogo Digital de {colmadoNombre}!</h4>
-                      <p className="text-[11px] text-[#0284C7] mt-0.5">Configura tu nombre y dirección en 1 paso para enviarte tus pedidos a domicilio.</p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      setIsEditingProfile(true);
-                      setShowOrderModal(true);
-                    }}
-                    className="w-full sm:w-auto px-4 py-2 bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-bold rounded-full shadow-md shadow-[#0284C7]/20 whitespace-nowrap transition-all"
-                  >
-                    ⚙️ Configurar Mis Datos
-                  </button>
-                </div>
-              ) : (
-                <div className="bg-white border border-[#E2E8F0] p-3 px-4 rounded-[16px] flex items-center justify-between text-xs text-[#64748B] shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">👤</span>
-                    <span>Hola <strong className="text-[#0F172A]">{customerName}</strong> (📍 {customerAddress})</span>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      setIsEditingProfile(true);
-                      setShowOrderModal(true);
-                    }}
-                    className="text-[#0284C7] hover:underline font-bold text-[11px]"
-                  >
-                    ✏️ Editar Datos
-                  </button>
-                </div>
-              )}
-              
-              {/* BUSCADOR ROUNDED PILL */}
-              <div className="bg-white border border-[#E2E8F0] p-3 rounded-full shadow-sm flex items-center gap-3">
-                <span className="text-lg text-[#94A3B8] ml-2">🔍</span>
-                <input 
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Buscar 'leche', 'pan', 'coca-cola', 'huevos'..."
-                  className="bg-transparent w-full text-[#0F172A] font-medium placeholder-[#94A3B8] focus:outline-none text-sm"
-                />
-                {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="text-xs text-[#94A3B8] hover:text-[#0F172A] pr-2">✕</button>
-                )}
-              </div>
-
-              {/* PILLS DE CATEGORÍAS */}
+              {/* CHIPS SELECCIÓN DE CATEGORÍAS */}
               <div>
-                <span className="text-xs font-bold text-[#64748B] block mb-2">
-                  Mostrando {filteredProducts.length} productos disponibles:
+                <span className="text-xs font-extrabold text-[#64748B] block mb-2">
+                  Categorías Disponibles ({filteredProducts.length} prods):
                 </span>
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
                   {CATEGORIAS.map(cat => {
@@ -381,15 +376,15 @@
                       <button
                         key={cat.id}
                         onClick={() => setSelectedCategory(cat.id)}
-                        className={`px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-all border ${
+                        className={`px-4 py-2 rounded-2xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all border ${
                           isActive
-                            ? 'bg-[#E0F2FE] text-[#0284C7] border-[#BAE6FD] shadow-sm'
+                            ? 'bg-[#E0F2FE] text-[#0284C7] border-[#0284C7] shadow-sm font-extrabold scale-105'
                             : 'bg-white text-[#64748B] border-[#E2E8F0] hover:bg-[#F1F5F9] hover:text-[#0F172A]'
                         }`}
                       >
-                        <span>{cat.icon}</span>
+                        <span className="text-sm">{cat.icon}</span>
                         <span>{cat.nombre}</span>
-                        <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${isActive ? 'bg-[#0284C7] text-white' : 'bg-[#E2E8F0] text-[#64748B]'}`}>
+                        <span className={`px-2 py-0.2 rounded-full text-[10px] font-mono ${isActive ? 'bg-[#0284C7] text-white' : 'bg-[#E2E8F0] text-[#64748B]'}`}>
                           {count}
                         </span>
                       </button>
@@ -398,60 +393,118 @@
                 </div>
               </div>
 
-              {/* GRID DE PRODUCTOS DE ALTA CONVERSIÓN */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {filteredProducts.map(product => {
-                  const pricePrev = product.precioAnterior;
-                  return (
-                    <div 
-                      key={product.id}
-                      className="bg-white border border-[#E2E8F0] p-4 rounded-[20px] shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex flex-col justify-between transition-all hover:shadow-md hover:border-[#BAE6FD] relative"
-                    >
-                      <div className="w-full h-32 bg-white rounded-xl overflow-hidden mb-3 flex items-center justify-center p-2">
-                        <img src={product.imagen} alt={product.nombre} className="max-h-full max-w-full object-contain" />
-                      </div>
+              {/* GRID DE PRODUCTOS */}
+              <div className="space-y-3">
+                <h3 className="font-extrabold text-sm text-[#0F172A] flex items-center gap-1.5">
+                  <span>⭐ Productos Destacados</span>
+                </h3>
 
-                      <div>
-                        <h4 className="font-bold text-xs text-[#0F172A] line-clamp-2 leading-snug">{product.nombre}</h4>
-                        <span className="text-[11px] text-[#64748B] block mt-0.5">{product.categoria}</span>
-                      </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5">
+                  {filteredProducts.map(product => {
+                    const pricePrev = product.precioAnterior;
+                    const itemInCart = cart.find(i => i.id === product.id);
 
-                      <div className="flex items-end justify-between pt-3 mt-2 border-t border-[#F1F5F9]">
-                        <div>
-                          <span className="font-bold text-sm text-[#0F172A] block">RD$ {product.precio}</span>
-                          {pricePrev && <span className="text-[10px] text-[#EF4444] line-through font-normal">RD$ {pricePrev}</span>}
+                    return (
+                      <div 
+                        key={product.id}
+                        className="bg-white border border-[#E2E8F0] p-3.5 rounded-[22px] shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col justify-between transition-all hover:shadow-md hover:border-[#BAE6FD] relative group"
+                      >
+                        <div className="w-full h-32 bg-white rounded-xl overflow-hidden mb-2.5 flex items-center justify-center p-2">
+                          <img src={product.imagen} alt={product.nombre} className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" />
                         </div>
 
-                        <button 
-                          onClick={() => addToCart(product)}
-                          className="w-8 h-8 rounded-full bg-white border border-[#FEE2E2] shadow-sm flex items-center justify-center text-[#EF4444] font-bold text-lg hover:bg-[#FEF2F2] hover:scale-105 active:scale-95 transition-all"
-                        >
-                          +
-                        </button>
+                        <div>
+                          <h4 className="font-extrabold text-xs text-[#0F172A] line-clamp-2 leading-snug">{product.nombre}</h4>
+                          <span className="text-[10px] font-bold text-[#64748B] bg-[#F1F5F9] px-2 py-0.5 rounded-md inline-block mt-1">{product.categoria}</span>
+                        </div>
+
+                        <div className="flex items-end justify-between pt-3 mt-2 border-t border-[#F1F5F9]">
+                          <div>
+                            <span className="font-extrabold text-sm text-[#0284C7] block font-mono-tabular">RD$ {product.precio}</span>
+                            {pricePrev && <span className="text-[10px] text-[#EF4444] line-through font-normal">RD$ {pricePrev}</span>}
+                          </div>
+
+                          <button 
+                            onClick={() => addToCart(product)}
+                            className="w-8 h-8 rounded-full bg-[#0284C7] hover:bg-[#0369A1] shadow-md shadow-[#0284C7]/20 flex items-center justify-center text-white font-bold text-base hover:scale-110 active:scale-95 transition-all relative"
+                          >
+                            +
+                            {itemInCart && (
+                              <span className="absolute -top-1 -right-1 bg-[#EF4444] text-white text-[9px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center border border-white">
+                                {itemInCart.qty}
+                              </span>
+                            )}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
 
             </main>
 
-            {/* BOTÓN FLOTANTE PRINCIPAL: SOLICITAR PEDIDO AL COLMADO */}
+            {/* CARRITO FLOTANTE INFERIOR CON PRODUCTOS SELECCIONADOS (EXPANDIBLE & DESPLEGABLE) */}
             {cartCount > 0 && (
-              <div className="fixed bottom-0 inset-x-0 bg-white border-t border-[#E2E8F0] p-4 z-40 shadow-2xl">
-                <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-                  <div>
-                    <span className="text-xs font-bold text-[#64748B] block">TU PEDIDO:</span>
-                    <span className="font-extrabold text-lg text-[#0284C7]">{cartCount} ítems • RD$ {cartTotal.toFixed(2)}</span>
+              <div className="fixed bottom-0 inset-x-0 bg-white border-t border-[#E2E8F0] shadow-[0_-8px_30px_rgba(0,0,0,0.12)] z-40 rounded-t-[24px] animate-fade-in-up">
+                <div className="max-w-4xl mx-auto p-4 space-y-3">
+                  
+                  {/* CABECERA INTERACTIVA DEL CARRITO DESPLEGABLE */}
+                  <div className="flex items-center justify-between">
+                    <button 
+                      onClick={() => setIsCartExpanded(!isCartExpanded)}
+                      className="flex items-center gap-2 text-xs font-extrabold text-[#0F172A] hover:text-[#0284C7] transition-colors"
+                    >
+                      <span className="bg-[#E0F2FE] text-[#0284C7] px-2.5 py-1 rounded-full text-xs font-bold">
+                        🛒 {cartCount} {cartCount === 1 ? 'producto' : 'productos'}
+                      </span>
+                      <span>{isCartExpanded ? '▼ Ocultar Lista' : '▲ Ver Productos Guardados'}</span>
+                    </button>
+
+                    <div className="text-right">
+                      <span className="text-[10px] text-[#64748B] font-bold block uppercase">SUBTOTAL:</span>
+                      <span className="font-extrabold text-base text-[#0284C7] font-mono-tabular">RD$ {cartTotal.toFixed(2)}</span>
+                    </div>
                   </div>
 
+                  {/* LISTA DESPLEGABLE DE PRODUCTOS SELECCIONADOS */}
+                  {isCartExpanded && (
+                    <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl p-3 max-h-56 overflow-y-auto space-y-2 text-xs custom-scrollbar animate-fade-in-up">
+                      <div className="flex items-center justify-between pb-2 border-b border-[#E2E8F0] text-[10.5px] font-bold text-[#64748B] uppercase">
+                        <span>Items Seleccionados ({cart.length})</span>
+                        <button onClick={() => setCart([])} className="text-[#EF4444] hover:underline">🗑️ Vaciar Carrito</button>
+                      </div>
+
+                      {cart.map(item => (
+                        <div key={item.id} className="bg-white border border-[#E2E8F0] p-2.5 rounded-xl flex items-center justify-between gap-3 shadow-sm">
+                          <div className="flex-1 min-w-0">
+                            <h5 className="font-extrabold text-xs text-[#0F172A] truncate">{item.nombre}</h5>
+                            <span className="text-[10.5px] text-[#64748B] font-mono">RD$ {item.precio.toFixed(2)} c/u</span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg px-2 py-1">
+                            <button onClick={() => updateCartQty(item.id, -1)} className="w-5 h-5 rounded bg-white text-[#0F172A] font-bold border border-[#CBD5E1] hover:bg-[#EF4444] hover:text-white">-</button>
+                            <span className="font-mono font-extrabold text-xs px-1">{item.qty}</span>
+                            <button onClick={() => updateCartQty(item.id, 1)} className="w-5 h-5 rounded bg-white text-[#0F172A] font-bold border border-[#CBD5E1] hover:bg-[#0284C7] hover:text-white">+</button>
+                          </div>
+
+                          <span className="font-extrabold text-xs text-[#0284C7] font-mono-tabular min-w-[65px] text-right">
+                            RD$ {(item.precio * item.qty).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* BOTÓN PRINCIPAL FINALIZAR PEDIDO A DOMICILIO */}
                   <button
                     onClick={() => setShowOrderModal(true)}
-                    className="px-6 py-3.5 bg-[#0284C7] hover:bg-[#0369A1] text-white font-bold text-xs sm:text-sm rounded-full shadow-lg shadow-[#0284C7]/25 flex items-center gap-2 transition-all"
+                    className="w-full py-3.5 bg-[#0284C7] hover:bg-[#0369A1] text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-lg shadow-[#0284C7]/25 flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
                   >
-                    <span>📲 Solicitar Pedido al Colmado</span>
+                    <span>📲 Solicitar Pedido a Domicilio</span>
                     <span>→</span>
                   </button>
+
                 </div>
               </div>
             )}

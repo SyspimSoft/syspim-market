@@ -264,6 +264,10 @@ tr:hover td {
     size: 80mm auto;
   }
 
+  img, svg, picture, canvas {
+    display: none !important;
+  }
+
   *, *::before, *::after {
     background: transparent !important;
     color: #000 !important;
@@ -355,4 +359,21 @@ tr:hover td {
     font-weight: 900;
     letter-spacing: 2px;
   }
+}
+
+/* Custom Scrollbar for POS Cart & Lists */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #F1F5F9;
+  border-radius: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
 }

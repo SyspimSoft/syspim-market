@@ -19,7 +19,7 @@ const catalogoProductos = [
     precio: 76,
     precioAnterior: 78,
     categoria: "Lácteos",
-    imagen: "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=400&q=80",
+    imagen: "public/assets/rica_leche_listamilk.png",
     stock: 45
   },
   {
@@ -29,7 +29,7 @@ const catalogoProductos = [
     precio: 76,
     precioAnterior: null,
     categoria: "Lácteos",
-    imagen: "https://images.unsplash.com/photo-1563636619-e9143da7973b?auto=format&fit=crop&w=400&q=80",
+    imagen: "public/assets/rica_leche_descremada.png",
     stock: 30
   },
   {
@@ -361,12 +361,463 @@ const catalogoProductos = [
     categoria: "Lácteos",
     imagen: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?auto=format&fit=crop&w=400&q=80",
     stock: 12
+  },
+  {
+    id: "prod_036",
+    tenant_id: "t-001",
+    nombre: "Repollo Morado Criollo",
+    precio: 59,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1594282486552-05b4d80fbb9f?auto=format&fit=crop&w=400&q=80",
+    stock: 25
+  },
+  {
+    id: "prod_037",
+    tenant_id: "t-001",
+    nombre: "Manzana Rockit 12/2 Lb",
+    precio: 349,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=400&q=80",
+    stock: 20
+  },
+  {
+    id: "prod_038",
+    tenant_id: "t-001",
+    nombre: "Picadillo De Vegetales (lsw)",
+    precio: 89,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=400&q=80",
+    stock: 30
+  },
+  {
+    id: "prod_039",
+    tenant_id: "t-001",
+    nombre: "Manzana Granny Imp 3 Lb",
+    precio: 299,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1619546813926-a78fa6372ce2?auto=format&fit=crop&w=400&q=80",
+    stock: 18
+  },
+  {
+    id: "prod_040",
+    tenant_id: "t-001",
+    nombre: "Ajo Desgranado Lb",
+    precio: 119,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1540148426945-6cf22a6b2383?auto=format&fit=crop&w=400&q=80",
+    stock: 40
+  },
+  {
+    id: "prod_041",
+    tenant_id: "t-001",
+    nombre: "Melon Cantaloupe Und",
+    precio: 129,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1571575173700-afb9492e6a50?auto=format&fit=crop&w=400&q=80",
+    stock: 15
+  },
+  {
+    id: "prod_042",
+    tenant_id: "t-001",
+    nombre: "Aji Gustoso Paq.",
+    precio: 89,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?auto=format&fit=crop&w=400&q=80",
+    stock: 35
+  },
+  {
+    id: "prod_043",
+    tenant_id: "t-001",
+    nombre: "Piña Md2 Un Porcionada",
+    precio: 139,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1550258987-190a2d41a8ba?auto=format&fit=crop&w=400&q=80",
+    stock: 22
+  },
+  {
+    id: "prod_044",
+    tenant_id: "t-001",
+    nombre: "Naranja Agria Lb",
+    precio: 54,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1534531141161-e41d1341d1de?auto=format&fit=crop&w=400&q=80",
+    stock: 50
+  },
+  {
+    id: "prod_045",
+    tenant_id: "t-001",
+    nombre: "Albahaca Verde Clamshell",
+    precio: 69,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1608683273678-854746f3a3d5?auto=format&fit=crop&w=400&q=80",
+    stock: 15
+  },
+  {
+    id: "prod_046",
+    tenant_id: "t-001",
+    nombre: "Manzana Gala Org Imp 2 Lb",
+    precio: 339,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=400&q=80",
+    stock: 12
+  },
+  {
+    id: "prod_047",
+    tenant_id: "t-001",
+    nombre: "Pepino Mini Crunch",
+    precio: 49,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1449300079323-02e209d9d3a6?auto=format&fit=crop&w=400&q=80",
+    stock: 28
+  },
+  {
+    id: "prod_048",
+    tenant_id: "t-001",
+    nombre: "Ciruela Fresca Imp Lb",
+    precio: 199,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1521997888043-aa9c827744f8?auto=format&fit=crop&w=400&q=80",
+    stock: 20
+  },
+  {
+    id: "prod_049",
+    tenant_id: "t-001",
+    nombre: "Espinaca Verde Imp 10 Oz",
+    precio: 209,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=400&q=80",
+    stock: 18
+  },
+  {
+    id: "prod_050",
+    tenant_id: "t-001",
+    nombre: "Perejil Liso Emp",
+    precio: 44,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1608683273678-854746f3a3d5?auto=format&fit=crop&w=400&q=80",
+    stock: 30
+  },
+  {
+    id: "prod_051",
+    tenant_id: "t-001",
+    nombre: "Blueberries Imp 4.4 Oz",
+    precio: 219,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1498557850523-fd3d118b962e?auto=format&fit=crop&w=400&q=80",
+    stock: 25
+  },
+  {
+    id: "prod_052",
+    tenant_id: "t-001",
+    nombre: "Espinaca Criolla Emp",
+    precio: 42,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=400&q=80",
+    stock: 32
+  },
+  {
+    id: "prod_053",
+    tenant_id: "t-001",
+    nombre: "Berro Emp",
+    precio: 44,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1608683273678-854746f3a3d5?auto=format&fit=crop&w=400&q=80",
+    stock: 20
+  },
+  {
+    id: "prod_054",
+    tenant_id: "t-001",
+    nombre: "Romero",
+    precio: 59,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1608683273678-854746f3a3d5?auto=format&fit=crop&w=400&q=80",
+    stock: 15
+  },
+  {
+    id: "prod_055",
+    tenant_id: "t-001",
+    nombre: "Classic Sal Espinaca Baby Org",
+    precio: 319,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=400&q=80",
+    stock: 10
+  },
+  {
+    id: "prod_056",
+    tenant_id: "t-001",
+    nombre: "Hongo Champiñón Rebanado",
+    precio: 325,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1504470695779-75300268aa0e?auto=format&fit=crop&w=400&q=80",
+    stock: 14
+  },
+  {
+    id: "prod_057",
+    tenant_id: "t-001",
+    nombre: "Cebolla Roja Imp Lb",
+    precio: 149,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1618512496248-a07fe83aa8cf?auto=format&fit=crop&w=400&q=80",
+    stock: 40
+  },
+  {
+    id: "prod_058",
+    tenant_id: "t-001",
+    nombre: "Rábano Rojo Lb",
+    precio: 79,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1593105544559-ecb03bf76f82?auto=format&fit=crop&w=400&q=80",
+    stock: 22
+  },
+  {
+    id: "prod_059",
+    tenant_id: "t-001",
+    nombre: "Hongo Champiñón Cesta",
+    precio: 319,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1504470695779-75300268aa0e?auto=format&fit=crop&w=400&q=80",
+    stock: 12
+  },
+  {
+    id: "prod_060",
+    tenant_id: "t-001",
+    nombre: "Manzana Fuji Imp 3 Lb",
+    precio: 269,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=400&q=80",
+    stock: 18
+  },
+  {
+    id: "prod_061",
+    tenant_id: "t-001",
+    nombre: "Cúrcuma Org. Lb",
+    precio: 99,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=400&q=80",
+    stock: 30
+  },
+  {
+    id: "prod_062",
+    tenant_id: "t-001",
+    nombre: "Lechuga Corazón De Romana",
+    precio: 154,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?auto=format&fit=crop&w=400&q=80",
+    stock: 25
+  },
+  {
+    id: "prod_063",
+    tenant_id: "t-001",
+    nombre: "Pico De Gallo Un (lswp)",
+    precio: 89,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1590779033100-9f60a05a013d?auto=format&fit=crop&w=400&q=80",
+    stock: 16
+  },
+  {
+    id: "prod_064",
+    tenant_id: "t-001",
+    nombre: "Sazón Natural Und",
+    precio: 199,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1590779033100-9f60a05a013d?auto=format&fit=crop&w=400&q=80",
+    stock: 20
+  },
+  {
+    id: "prod_065",
+    tenant_id: "t-001",
+    nombre: "Manzana Roja Imp 3 Lb",
+    precio: 264,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=400&q=80",
+    stock: 24
+  },
+  {
+    id: "prod_066",
+    tenant_id: "t-001",
+    nombre: "Limón Amarillo Imp Lb",
+    precio: 135,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1534531141161-e41d1341d1de?auto=format&fit=crop&w=400&q=80",
+    stock: 35
+  },
+  {
+    id: "prod_067",
+    tenant_id: "t-001",
+    nombre: "Guayaba Injerta",
+    precio: 49,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1536511135882-7d277a0ef88f?auto=format&fit=crop&w=400&q=80",
+    stock: 28
+  },
+  {
+    id: "prod_068",
+    tenant_id: "t-001",
+    nombre: "Ají Morrón Mamey Lb",
+    precio: 74,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?auto=format&fit=crop&w=400&q=80",
+    stock: 30
+  },
+  {
+    id: "prod_069",
+    tenant_id: "t-001",
+    nombre: "Manzanas Golden Delicious Lb",
+    precio: 79,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1619546813926-a78fa6372ce2?auto=format&fit=crop&w=400&q=80",
+    stock: 32
+  },
+  {
+    id: "prod_070",
+    tenant_id: "t-001",
+    nombre: "Perejil Rizado Emp",
+    precio: 44,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1608683273678-854746f3a3d5?auto=format&fit=crop&w=400&q=80",
+    stock: 20
+  },
+  {
+    id: "prod_071",
+    tenant_id: "t-001",
+    nombre: "Espinaca Hojas Paq (Glp)",
+    precio: 149,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=400&q=80",
+    stock: 15
+  },
+  {
+    id: "prod_072",
+    tenant_id: "t-001",
+    nombre: "Corazón De Romana 2 Lbs",
+    precio: 149,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?auto=format&fit=crop&w=400&q=80",
+    stock: 18
+  },
+  {
+    id: "prod_073",
+    tenant_id: "t-001",
+    nombre: "Ensalada Frutas Porcionada",
+    precio: 149,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1519996529931-28324d5a630e?auto=format&fit=crop&w=400&q=80",
+    stock: 20
+  },
+  {
+    id: "prod_074",
+    tenant_id: "t-001",
+    nombre: "Corazón De Apio Imp Und",
+    precio: 239,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1615485290382-441e4d049cb5?auto=format&fit=crop&w=400&q=80",
+    stock: 12
+  },
+  {
+    id: "prod_075",
+    tenant_id: "t-001",
+    nombre: "Brócoli Imp Und",
+    precio: 269,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1459411621453-7b03977f4bfc?auto=format&fit=crop&w=400&q=80",
+    stock: 22
+  },
+  {
+    id: "prod_076",
+    tenant_id: "t-001",
+    nombre: "Guandules Fresco Emp",
+    precio: 168,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1551462147-37885acc36f1?auto=format&fit=crop&w=400&q=80",
+    stock: 14
+  },
+  {
+    id: "prod_077",
+    tenant_id: "t-001",
+    nombre: "Classic Sal Rúcula Org",
+    precio: 319,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=400&q=80",
+    stock: 10
+  },
+  {
+    id: "prod_078",
+    tenant_id: "t-001",
+    nombre: "Manzana Granny Org Imp 3 Lb",
+    precio: 319,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1619546813926-a78fa6372ce2?auto=format&fit=crop&w=400&q=80",
+    stock: 15
+  },
+  {
+    id: "prod_079",
+    tenant_id: "t-001",
+    nombre: "Corazón De Romana Imp Und",
+    precio: 299,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?auto=format&fit=crop&w=400&q=80",
+    stock: 12
+  },
+  {
+    id: "prod_080",
+    tenant_id: "t-001",
+    nombre: "Manzana Gala Imp 3 Lb",
+    precio: 339,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    imagen: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=400&q=80",
+    stock: 20
   }
 ];
 
 // Categorías del Colmado
 const CATEGORIAS = [
   { id: 'all', nombre: '⭐ Todos los Productos', icon: '🛒' },
+  { id: 'Frutas y Vegetales', nombre: '🍎 Frutas & Vegetales', icon: '🍎' },
   { id: 'Lácteos', nombre: '🥛 Lácteos', icon: '🥛' },
   { id: 'Dulces y caramelos', nombre: '🍬 Dulces & Caramelos', icon: '🍬' },
   { id: 'Higiene y salud', nombre: '🧴 Higiene & Salud', icon: '🧴' },
@@ -453,6 +904,24 @@ function App() {
   const [cart, setCart] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState('consumidor_final');
   const [paymentMethod, setPaymentMethod] = useState('efectivo');
+  const [cashReceived, setCashReceived] = useState('');
+  const [ncfRequired, setNcfRequired] = useState(false);
+  const [rncNumber, setRncNumber] = useState('');
+  const cartListRef = useRef(null);
+
+  // Auto-scroll la lista de compras hacia abajo para que el nuevo producto aparezca abajo y los viejos suban
+  useEffect(() => {
+    if (cartListRef.current) {
+      setTimeout(() => {
+        if (cartListRef.current) {
+          cartListRef.current.scrollTo({
+            top: cartListRef.current.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      }, 50);
+    }
+  }, [cart]);
 
   // ESTADO DEL DIRECTORIO DE CLIENTES DEL COLMADO
   const [clientesList, setClientesList] = useState(() => {
@@ -795,17 +1264,27 @@ function App() {
   const handleCheckout = () => {
     if (cart.length === 0) return;
 
+    const recVal = Number(cashReceived) || cartTotal;
+    const changeVal = Math.max(0, recVal - cartTotal);
+
     const receipt = {
       id: `REC-${Math.floor(1000 + Math.random() * 9000)}`,
       fecha: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       cliente: CLIENTES.find(c => c.id === selectedCustomer)?.nombre || 'Consumidor Final',
       metodo: paymentMethod.toUpperCase(),
       items: [...cart],
-      total: cartTotal
+      total: cartTotal,
+      recibido: recVal,
+      devuelta: changeVal,
+      ncf: ncfRequired ? `B01${Math.floor(10000000 + Math.random() * 90000000)}` : null,
+      rnc: ncfRequired ? (rncNumber || '131-88995-2') : null
     };
 
     setCheckoutResult(receipt);
     setCart([]);
+    setCashReceived('');
+    setNcfRequired(false);
+    setRncNumber('');
     showToast('🎉 ¡Venta procesada con éxito!');
   };
 
@@ -937,257 +1416,309 @@ function App() {
 
       {/* 2. MAIN BODY GENERAL LIGHT RETAIL */}
       <main className="max-w-7xl mx-auto w-full px-4 lg:px-8 py-6 flex-1">
-        {/* ================= MODULO 1: PUNTO DE VENTA (POS ESCRITORIO) ================= */}
+        {/* ================= MODULO 1: TERMINAL DE CAJA DE COBRO (POS 2 COLUMNAS ESTILO SYSPIM FARMA) ================= */}
         {activeTab === 'pos' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-fade-in-up">
             
-            {/* LADO IZQUIERDO: BUSCADOR, CATEGORIAS Y GRID DE PRODUCTOS */}
-            <div className="lg:col-span-7 xl:col-span-8 flex flex-col lg:h-[calc(100vh-6rem)]">
+            {/* COLUMNA IZQUIERDA (8 COL / ~70%): BÚSQUEDA Y TABLA DETALLE DE LA VENTA */}
+            <div className="lg:col-span-8 flex flex-col space-y-4">
               
-              {/* HEADER FIJO: BUSCADOR Y CATEGORÍAS (NO SE ESCONDE AL HACER SCROLL) */}
-              <div className="sticky top-0 bg-[#F8FAFC] z-20 pb-3 pt-1 space-y-3 border-b border-[#E2E8F0] mb-3">
-                {/* BUSCADOR ROUNDED PILL (ESTILO ARCA CON LECTOR) */}
-                <div className="bg-[#FFFFFF] border border-[#E2E8F0] p-3 rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex items-center gap-3">
-                  <span className="text-lg text-[#94A3B8] ml-2">🔍</span>
-                  <input 
-                    ref={searchInputRef}
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Buscar 'leche', 'listamilk', 'parmalat', 'carnation', 'bravo'..."
-                    className="bg-transparent w-full text-[#0F172A] font-medium placeholder-[#94A3B8] focus:outline-none text-sm"
-                  />
-                  <span className="hidden sm:inline-block text-[#94A3B8] font-mono text-xs pr-2">[|||]</span>
-                  {searchQuery && (
-                    <button onClick={() => setSearchQuery('')} className="text-xs text-[#94A3B8] hover:text-[#0F172A] pr-2">
-                      ✕
-                    </button>
-                  )}
-                </div>
-
-                {/* CHIPS DE CONTEO Y CATEGORÍAS */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-                    {CATEGORIAS.map(cat => {
-                      const isActive = selectedCategory === cat.id;
-                      return (
-                        <button
-                          key={cat.id}
-                          onClick={() => setSelectedCategory(cat.id)}
-                          className={`px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all whitespace-nowrap border ${
-                            isActive
-                              ? 'bg-[#E0F2FE] text-[#0284C7] border-[#BAE6FD] shadow-sm'
-                              : 'bg-[#FFFFFF] text-[#64748B] border-[#E2E8F0] hover:bg-[#F8FAFC] hover:text-[#0F172A]'
-                          }`}
-                        >
-                          <span>{cat.icon}</span>
-                          <span>{cat.nombre}</span>
+              {/* CARD BÚSQUEDA / ESCÁNER RÁPIDO & ACCIONES (F8 / F9 / F4) */}
+              <div className="bg-[#FFFFFF] border border-[#E2E8F0] p-4 rounded-[22px] shadow-[0_4px_20px_rgba(0,0,0,0.04)] space-y-3">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                  
+                  {/* INPUT ESCÁNER BÚSQUEDA */}
+                  <div className="relative flex-1 w-full">
+                    <div className="bg-[#F8FAFC] border-2 border-[#E2E8F0] p-3 sm:p-3.5 rounded-2xl shadow-sm flex items-center gap-3 focus-within:border-[#0284C7] focus-within:bg-white transition-all">
+                      <span className="text-2xl text-[#0284C7] ml-2 flex-shrink-0">🔍</span>
+                      <input 
+                        ref={searchInputRef}
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (filteredProducts.length > 0) {
+                              addToCart(filteredProducts[0]);
+                              setSearchQuery('');
+                            }
+                          }
+                        }}
+                        placeholder="Busque por nombre o escanee código... (Enter para agregar)"
+                        className="bg-transparent w-full text-[#0F172A] font-extrabold placeholder-[#94A3B8] focus:outline-none text-base sm:text-lg px-2 py-1 font-jakarta leading-normal"
+                      />
+                      {searchQuery && (
+                        <button onClick={() => setSearchQuery('')} className="text-sm font-bold text-[#94A3B8] hover:text-[#EF4444] px-2 py-1 transition-colors">
+                          ✕
                         </button>
-                      );
-                    })}
+                      )}
+                    </div>
+
+                    {/* RESULTADOS DE AUTOCOMPLETADO RÁPIDO DE ALTA LEGIBILIDAD (WIDE & CRYSTAL CLEAR) */}
+                    {searchQuery.trim().length > 0 && (
+                      <div className="absolute left-0 right-0 top-full mt-2 bg-white border-2 border-[#0284C7] rounded-2xl shadow-[0_16px_40px_rgba(2,132,199,0.15)] z-50 max-h-96 overflow-y-auto divide-y divide-[#F1F5F9] custom-scrollbar">
+                        {filteredProducts.length === 0 ? (
+                          <div className="p-6 text-center text-sm font-bold text-[#64748B] bg-[#F8FAFC]">
+                            ⚠️ No se encontraron productos coincidentes con "{searchQuery}"
+                          </div>
+                        ) : (
+                          filteredProducts.map((p, idx) => {
+                            const isLowStock = p.stock <= 5;
+                            return (
+                              <div
+                                key={p.id}
+                                onClick={() => {
+                                  addToCart(p);
+                                  setSearchQuery('');
+                                }}
+                                className="p-4 sm:p-4.5 hover:bg-[#E0F2FE]/60 active:bg-[#BAE6FD]/60 cursor-pointer flex items-center justify-between gap-4 transition-colors group"
+                              >
+                                {/* INFORMACIÓN DEL PRODUCTO */}
+                                <div className="space-y-1.5 flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-extrabold text-sm sm:text-base text-[#0F172A] font-jakarta group-hover:text-[#0284C7] transition-colors truncate">
+                                      {p.nombre}
+                                    </span>
+                                    {idx === 0 && (
+                                      <span className="bg-[#0284C7] text-white text-[9.5px] font-extrabold uppercase px-2 py-0.5 rounded-md flex-shrink-0">
+                                        Enter (1ro)
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center gap-2 text-xs flex-wrap">
+                                    <span className="bg-[#F1F5F9] border border-[#E2E8F0] text-[#475569] font-bold px-2.5 py-0.5 rounded-lg">
+                                      {p.categoria || 'General'}
+                                    </span>
+                                    <span className={`font-mono font-bold px-2.5 py-0.5 rounded-lg border ${
+                                      isLowStock 
+                                        ? 'bg-[#FEE2E2] text-[#DC2626] border-[#FECACA]' 
+                                        : 'bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]'
+                                    }`}>
+                                      Stock: {p.stock} unid.
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* PRECIO E IMPORTADOR + BOTÓN AGREGAR */}
+                                <div className="flex items-center gap-3.5 flex-shrink-0">
+                                  <div className="text-right">
+                                    <span className="font-extrabold text-base sm:text-lg text-[#0284C7] font-mono-tabular block">
+                                      RD$ {p.precio.toFixed(2)}
+                                    </span>
+                                    {p.precioAnterior && (
+                                      <span className="text-xs text-[#EF4444] line-through font-normal block -mt-0.5 font-mono">
+                                        RD$ {p.precioAnterior}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    className="bg-[#0284C7] group-hover:bg-[#0369A1] text-white text-xs font-extrabold px-3.5 py-2 rounded-xl shadow-md shadow-[#0284C7]/20 flex items-center gap-1 transition-all group-hover:scale-105"
+                                  >
+                                    <span>+ Agregar</span>
+                                  </button>
+                                </div>
+
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <span className="text-xs font-bold text-[#64748B] whitespace-nowrap ml-2">
-                    {filteredProducts.length} prods
-                  </span>
+
+                  {/* BOTONES DE ATATAJOS RÁPIDOS */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => showToast('⏸️ Venta pausada')}
+                      className="px-3 py-2.5 rounded-xl border border-[#FEF08A] bg-[#FEFCE8] text-[#854D0E] font-bold text-xs flex items-center gap-1.5 hover:bg-[#FEF9C3] transition-colors"
+                    >
+                      <span>⏸️</span>
+                      <span className="hidden sm:inline">F8 Pausar</span>
+                    </button>
+                    <button
+                      onClick={() => showToast('▶️ Recuperando venta')}
+                      className="px-3 py-2.5 rounded-xl border border-[#BAE6FD] bg-[#E0F2FE] text-[#0369A1] font-bold text-xs flex items-center gap-1.5 hover:bg-[#BAE6FD] transition-colors"
+                    >
+                      <span>▶️</span>
+                      <span className="hidden sm:inline">F9 Recup.</span>
+                    </button>
+                    {cart.length > 0 && (
+                      <button
+                        onClick={() => setCart([])}
+                        className="px-3 py-2.5 rounded-xl border border-[#FECACA] bg-[#FEE2E2] text-[#DC2626] font-bold text-xs hover:bg-[#FCA5A5] transition-colors"
+                        title="Limpiar Carrito"
+                      >
+                        🗑️ Limpiar
+                      </button>
+                    )}
+                  </div>
+
                 </div>
               </div>
 
-              {/* RUEDA / SCROLLBAR INDEPENDIENTE PARA LA LISTA DE PRODUCTOS */}
-              <div className="flex-1 overflow-y-auto pr-2 pb-6">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-4 gap-4">
-                  {filteredProducts.map((product) => {
-                    const isOutOfStock = product.stock <= 0;
-                    const pricePrev = product.precioAnterior || product.precio_anterior;
+              {/* CARD DETALLE DE LA VENTA (TABLA DE PRODUCTOS EN CAJA) */}
+              <div className="bg-[#FFFFFF] border border-[#E2E8F0] rounded-[24px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between flex-1 min-h-[calc(100vh-14rem)]">
+                <div>
+                  <div className="flex items-center justify-between pb-4 border-b border-[#F1F5F9]">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-xl">📋</span>
+                      <h3 className="font-extrabold text-base text-[#0F172A] font-jakarta">Detalle de la Venta</h3>
+                      <span className="bg-[#E0F2FE] text-[#0284C7] font-extrabold text-xs px-2.5 py-0.5 rounded-full">
+                        {cartCount} items
+                      </span>
+                    </div>
 
-                    return (
-                      <div 
-                        key={product.id}
-                        className={`bg-[#FFFFFF] border border-[#E2E8F0] p-4 rounded-[20px] shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex flex-col justify-between transition-all hover:shadow-md hover:border-[#BAE6FD] relative ${
-                          isOutOfStock ? 'opacity-50 grayscale' : ''
-                        }`}
-                        onClick={() => !isOutOfStock && addToCart(product)}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-extrabold text-[#64748B]">Cliente:</span>
+                      <select
+                        value={selectedCustomer}
+                        onChange={(e) => setSelectedCustomer(e.target.value)}
+                        className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-3 py-1.5 text-xs font-extrabold text-[#0F172A] focus:outline-none"
                       >
-                        {/* IMAGEN DEL PRODUCTO */}
-                        <div className="w-full h-32 bg-[#FFFFFF] rounded-xl overflow-hidden mb-3 flex items-center justify-center p-2">
-                          <img 
-                            src={product.imagen || product.imagen_url} 
-                            alt={product.nombre}
-                            className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
-                          />
-                        </div>
+                        {CLIENTES.map(c => (
+                          <option key={c.id} value={c.id}>{c.nombre}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
 
-                        {/* INFORMACION DEL PRODUCTO */}
-                        <div>
-                          <h4 className="font-bold text-xs text-[#0F172A] line-clamp-2 leading-snug font-jakarta">
-                            {product.nombre}
-                          </h4>
-                          <span className="text-[11px] text-[#64748B] block mt-0.5">
-                            {product.categoria}
-                          </span>
-                          
-                          <div className="flex items-center justify-between mt-1.5 text-[10px]">
-                            <span className="text-[#64748B] font-medium">Stock: {product.stock}</span>
-                            {isOutOfStock && (
-                              <span className="text-[#EF4444] font-bold uppercase">Agotado</span>
-                            )}
-                          </div>
+                  {/* TABLA ALTA LEGIBILIDAD */}
+                  <div ref={cartListRef} className="mt-4 overflow-x-auto max-h-[calc(100vh-22rem)] overflow-y-auto border border-[#E2E8F0] rounded-2xl custom-scrollbar shadow-inner">
+                    {cart.length === 0 ? (
+                      <div className="py-24 text-center bg-[#F8FAFC] flex flex-col items-center justify-center space-y-2">
+                        <div className="w-16 h-16 rounded-full bg-[#E0F2FE] text-[#0284C7] flex items-center justify-center text-2xl font-bold mb-1">
+                          🛒
                         </div>
-
-                        {/* PRECIO & BOTÓN "+" CIRCULAR ROJO (ESTILO EXACTO ARCA / BRAVO) */}
-                        <div className="flex items-end justify-between pt-3 mt-2 border-t border-[#F1F5F9]">
-                          <div>
-                            <span className="font-bold text-sm text-[#0F172A] block font-jakarta">
-                              RD$ {product.precio}
-                            </span>
-                            {pricePrev && (
-                              <span className="text-[10px] text-[#EF4444] line-through font-normal">
-                                RD$ {pricePrev}
-                              </span>
-                            )}
-                          </div>
-
-                          <button 
-                            disabled={isOutOfStock}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              addToCart(product);
-                            }}
-                            className={`w-8 h-8 rounded-full bg-[#FFFFFF] border border-[#FEE2E2] shadow-sm flex items-center justify-center text-[#EF4444] font-bold text-lg hover:bg-[#FEF2F2] hover:scale-105 active:scale-95 transition-all ${
-                              isOutOfStock ? 'opacity-40 cursor-not-allowed text-[#64748B] bg-[#F1F5F9]' : ''
-                            }`}
-                          >
-                            +
-                          </button>
-                        </div>
+                        <p className="font-extrabold text-base text-[#0F172A]">Caja lista para procesar cobro</p>
+                        <p className="text-xs text-[#64748B] max-w-sm">
+                          Escanea el código de barras o escribe el nombre en el buscador superior.
+                        </p>
                       </div>
-                    );
-                  })}
+                    ) : (
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0] text-[#475569] uppercase font-mono tracking-wider text-xs">
+                            <th className="py-3.5 px-4 font-extrabold">PRODUCTO</th>
+                            <th className="py-3.5 px-4 font-extrabold text-center">EA</th>
+                            <th className="py-3.5 px-4 font-extrabold text-center">CANT.</th>
+                            <th className="py-3.5 px-4 font-extrabold text-right">PRECIO</th>
+                            <th className="py-3.5 px-4 font-extrabold text-right">TOTAL</th>
+                            <th className="py-3.5 px-4 font-extrabold text-center"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#F1F5F9] bg-white">
+                          {cart.map((item) => (
+                            <tr key={item.id} className="hover:bg-[#F0F9FF] transition-colors">
+                              
+                              {/* NOMBRE Y CATEGORIA DEL PRODUCTO */}
+                              <td className="py-4 px-4">
+                                <span className="font-extrabold text-sm sm:text-base text-[#0F172A] font-jakarta block leading-tight">
+                                  {item.nombre}
+                                </span>
+                                <span className="text-[11px] font-bold text-[#0284C7] bg-[#E0F2FE] px-2 py-0.5 rounded-md inline-block mt-1">
+                                  {item.categoria || 'General'}
+                                </span>
+                              </td>
+
+                              {/* STOCK EXISTENCIA (EA) */}
+                              <td className="py-4 px-4 text-center font-mono font-extrabold text-xs text-[#15803D]">
+                                {item.stock || 99}
+                              </td>
+
+                              {/* CANTIDAD */}
+                              <td className="py-4 px-4">
+                                <div className="flex items-center justify-center gap-1.5 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl px-2 py-1 max-w-[100px] mx-auto shadow-sm">
+                                  <button
+                                    onClick={() => updateCartQty(item.id, -1)}
+                                    className="w-5 h-5 rounded-lg flex items-center justify-center text-xs font-extrabold bg-white text-[#0F172A] border border-[#CBD5E1] hover:bg-[#EF4444] hover:text-white transition-colors"
+                                  >
+                                    -
+                                  </button>
+                                  <span className="font-mono text-sm font-extrabold text-[#0F172A] min-w-[20px] text-center">
+                                    {item.qty}
+                                  </span>
+                                  <button
+                                    onClick={() => updateCartQty(item.id, 1)}
+                                    className="w-5 h-5 rounded-lg flex items-center justify-center text-xs font-extrabold bg-white text-[#0F172A] border border-[#CBD5E1] hover:bg-[#0284C7] hover:text-white transition-colors"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </td>
+
+                              {/* PRECIO */}
+                              <td className="py-4 px-4 text-right font-extrabold text-sm sm:text-base text-[#0F172A] font-mono-tabular">
+                                RD$ {item.precio.toFixed(2)}
+                              </td>
+
+                              {/* TOTAL */}
+                              <td className="py-4 px-4 text-right font-extrabold text-sm sm:text-base text-[#0284C7] font-mono-tabular">
+                                RD$ {(item.precio * item.qty).toFixed(2)}
+                              </td>
+
+                              {/* ELIMINAR */}
+                              <td className="py-4 px-4 text-center">
+                                <button
+                                  onClick={() => updateCartQty(item.id, -item.qty)}
+                                  title="Quitar ítem"
+                                  className="w-6 h-6 rounded-full text-[#EF4444] hover:bg-[#FEE2E2] font-bold text-xs inline-flex items-center justify-center transition-colors"
+                                >
+                                  ✕
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
                 </div>
               </div>
 
             </div>
 
-            {/* LADO DERECHO: PANEL DE CAJA (ESTILO ARCA LIGHT) */}
-            <div className="lg:col-span-5 xl:col-span-4 sticky top-20 max-h-[calc(100vh-5rem)] overflow-y-auto pr-1">
-              <div className="bg-[#FFFFFF] border border-[#E2E8F0] rounded-[20px] p-6 shadow-[0_4px_20px_rgba(0,0,0,0.04)] flex flex-col justify-between">
+            {/* COLUMNA DERECHA (4 COL / ~30%): CARD PANEL RESUMEN DE COBRO */}
+            <div className="lg:col-span-4 sticky top-20">
+              <div className="bg-[#FFFFFF] border border-[#E2E8F0] rounded-[24px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.06)] space-y-5">
                 
-                <div>
-                  {/* HEADER CAJA */}
-                  <div className="flex items-center justify-between pb-4 border-b border-[#F1F5F9]">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-[#E0F2FE] border border-[#BAE6FD] flex items-center justify-center text-[#0284C7] font-bold text-sm">
-                        🧾
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-base text-[#0F172A] font-jakarta">Caja / Venta</h3>
-                        <p className="text-[11px] text-[#64748B]">Resumen de la transacción</p>
-                      </div>
-                    </div>
+                <h3 className="font-extrabold text-base text-[#0F172A] font-jakarta text-center tracking-wide uppercase">
+                  RESUMEN DE COBRO
+                </h3>
 
-                    <div className="flex items-center gap-2">
-                      <span className="bg-[#E0F2FE] border border-[#BAE6FD] text-[#0369A1] font-bold text-xs px-3 py-1 rounded-full">
-                        🛒 {cartCount} items
-                      </span>
-                      {cart.length > 0 && (
-                        <button
-                          onClick={() => setCart([])}
-                          className="text-xs font-bold text-[#EF4444] hover:text-[#DC2626] bg-[#FEE2E2] border border-[#FECACA] px-2.5 py-1 rounded-full transition-all"
-                        >
-                          Limpiar
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* SELECTOR DE CLIENTE */}
-                  <div className="mt-4">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] mb-1.5 block">
-                      CLIENTE / CUENTA:
-                    </label>
-                    <select
-                      value={selectedCustomer}
-                      onChange={(e) => setSelectedCustomer(e.target.value)}
-                      className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#0F172A] focus:outline-none focus:border-[#0284C7] transition-all"
-                    >
-                      {CLIENTES.map(c => (
-                        <option key={c.id} value={c.id} className="bg-white text-[#0F172A]">{c.nombre}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* LISTA DE ITEMS EN CARRITO */}
-                  <div className="mt-4 max-h-[180px] overflow-y-auto space-y-2.5 pr-1">
-                    {cart.length === 0 ? (
-                      <div className="py-10 text-center border border-dashed border-[#E2E8F0] rounded-[16px] bg-[#F8FAFC]">
-                        <span className="text-3xl block mb-1.5 opacity-40">🛒</span>
-                        <p className="font-bold text-xs text-[#0F172A]">El carrito de caja está vacío</p>
-                        <p className="text-[11px] text-[#64748B] mt-0.5">Haz clic en "+" en cualquier tarjeta para agregar</p>
-                      </div>
-                    ) : (
-                      cart.map(item => (
-                        <div key={item.id} className="bg-[#F8FAFC] border border-[#E2E8F0] p-3 rounded-[14px] flex items-center justify-between gap-3">
-                          <img src={item.imagen || item.imagen_url} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0 bg-white" />
-                          
-                          <div className="flex-1 min-w-0">
-                            <h5 className="font-bold text-xs text-[#0F172A] truncate font-jakarta">{item.nombre}</h5>
-                            <span className="text-[11px] font-semibold text-[#64748B] block">
-                              RD$ {item.precio.toFixed(2)} c/u
-                            </span>
-                          </div>
-
-                          {/* CONTROLES DE CANTIDAD */}
-                          <div className="flex items-center gap-1.5 bg-[#FFFFFF] border border-[#E2E8F0] rounded-full p-1 shadow-sm">
-                            <button
-                              onClick={() => updateCartQty(item.id, -1)}
-                              className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold bg-[#F1F5F9] text-[#0F172A] hover:bg-[#E2E8F0]"
-                            >
-                              -
-                            </button>
-                            <span className="font-mono text-xs font-bold text-[#0F172A] px-1 min-w-[18px] text-center">
-                              {item.qty}
-                            </span>
-                            <button
-                              onClick={() => updateCartQty(item.id, 1)}
-                              className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold bg-[#F1F5F9] text-[#0F172A] hover:bg-[#E2E8F0]"
-                            >
-                              +
-                            </button>
-                          </div>
-
-                          {/* MONTO ITEM TOTAL */}
-                          <div className="text-right min-w-[65px]">
-                            <span className="font-bold text-xs text-[#0F172A] block font-jakarta">
-                              RD$ {(item.precio * item.qty).toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
+                {/* BANNER VERDE GIGANTE DEL TOTAL A PAGAR */}
+                <div className="bg-[#0284C7] text-white p-5 rounded-2xl text-center shadow-lg shadow-[#0284C7]/20 space-y-1">
+                  <span className="text-xs font-extrabold uppercase tracking-widest block opacity-90">
+                    TOTAL A PAGAR RD$
+                  </span>
+                  <span className="text-4xl font-extrabold tracking-tight font-jakarta block">
+                    {cartTotal.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
                 </div>
 
-                {/* PIE DEL PANEL DE CAJA Y SELECCION DE METODO DE PAGO */}
-                <div className="mt-5 pt-4 border-t border-[#F1F5F9]">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] mb-2 block">
-                    MÉTODO DE PAGO:
+                {/* MÉTODO DE PAGO */}
+                <div className="space-y-2">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] block">
+                    Método de Pago
                   </span>
-                  <div className="grid grid-cols-4 gap-1.5 mb-4">
+                  <div className="grid grid-cols-3 gap-2">
                     {[
                       { id: 'efectivo', label: '💵 EFECTIVO' },
                       { id: 'tarjeta', label: '💳 TARJETA' },
-                      { id: 'transferencia', label: '📲 TRANSFER' },
-                      { id: 'fiado', label: '📒 FIADO' }
+                      { id: 'transferencia', label: '📲 TRANSFER' }
                     ].map(m => {
                       const active = paymentMethod === m.id;
                       return (
                         <button
                           key={m.id}
                           onClick={() => setPaymentMethod(m.id)}
-                          className={`py-2 rounded-full text-[10px] font-bold transition-all border ${
+                          className={`py-3 rounded-xl text-xs font-bold transition-all border flex flex-col items-center justify-center gap-1 ${
                             active
-                              ? 'bg-[#E0F2FE] text-[#0284C7] border-[#BAE6FD] shadow-sm'
-                              : 'bg-[#F8FAFC] text-[#64748B] border-[#E2E8F0] hover:bg-[#E2E8F0] hover:text-[#0F172A]'
+                              ? 'bg-[#E0F2FE] text-[#0284C7] border-[#0284C7] shadow-sm font-extrabold'
+                              : 'bg-[#F8FAFC] text-[#64748B] border-[#E2E8F0] hover:bg-[#E2E8F0]'
                           }`}
                         >
                           {m.label}
@@ -1195,39 +1726,89 @@ function App() {
                       );
                     })}
                   </div>
+                </div>
 
-                  {/* BLOQUE DE TOTAL LIGHT RETAIL */}
-                  <div className="bg-[#F8FAFC] border border-[#E2E8F0] text-[#0F172A] p-4 rounded-[16px] flex items-center justify-between mb-4 shadow-sm">
+                {/* CALCULADORA DE EFECTIVO RECIBIDO Y DEVUELTA */}
+                {paymentMethod === 'efectivo' && (
+                  <div className="space-y-3 pt-1">
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-[#64748B] block">
-                        TOTAL A COBRAR
-                      </span>
-                      <span className="text-[11px] text-[#64748B]">
-                        Subtotal: RD$ {cartTotal.toFixed(2)}
-                      </span>
+                      <label className="text-[11px] font-extrabold uppercase tracking-wider text-[#0369A1] mb-1 block">
+                        Efectivo Recibido RD$ (F2)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          value={cashReceived}
+                          onChange={(e) => setCashReceived(e.target.value)}
+                          placeholder="0.00"
+                          className="w-full bg-[#F8FAFC] border-2 border-[#0284C7] rounded-xl px-4 py-3 text-xl font-extrabold text-[#0F172A] focus:outline-none font-mono-tabular text-center shadow-inner"
+                        />
+                      </div>
                     </div>
-                    <div className="font-extrabold text-2xl tracking-tight text-[#0284C7] font-jakarta">
-                      RD$ {cartTotal.toFixed(2)}
+
+                    {/* DEVUELTA */}
+                    <div className="bg-[#FEFCE8] border border-[#FEF08A] p-3.5 rounded-xl text-center shadow-sm">
+                      <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-[#854D0E] block">
+                        DEVUELTA
+                      </span>
+                      {(() => {
+                        const rec = Number(cashReceived) || 0;
+                        const diff = rec - cartTotal;
+                        if (!cashReceived || rec === 0) {
+                          return <span className="font-extrabold text-2xl text-[#0F172A] font-mono-tabular block">RD$ 0.00</span>;
+                        }
+                        if (diff >= 0) {
+                          return <span className="font-extrabold text-2xl text-[#15803D] font-mono-tabular block">RD$ {diff.toFixed(2)}</span>;
+                        }
+                        return (
+                          <span className="font-extrabold text-xs text-[#DC2626] font-mono-tabular block bg-[#FEE2E2] py-1 px-2 rounded-lg mt-1">
+                            Falta RD$ {Math.abs(diff).toFixed(2)}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
+                )}
 
-                  {/* BOTON GIGANTE COBRAR AHORA F4 */}
-                  <button
-                    disabled={cart.length === 0}
-                    onClick={handleCheckout}
-                    className={`w-full py-3.5 rounded-[14px] font-bold text-sm tracking-wide flex items-center justify-center gap-3 transition-all ${
-                      cart.length === 0
-                        ? 'bg-[#F1F5F9] text-[#94A3B8] border border-[#E2E8F0] cursor-not-allowed'
-                        : 'bg-[#0284C7] hover:bg-[#0369A1] text-white shadow-lg shadow-[#0284C7]/20 cursor-pointer'
-                    }`}
-                  >
-                    <span>COBRAR AHORA</span>
-                    <kbd className="bg-white text-[#0F172A] font-mono text-xs px-2.5 py-0.5 rounded-md border border-[#E2E8F0]">
-                      F4
-                    </kbd>
-                  </button>
+                {/* CHECKBOX COMPROBANTE FISCAL NCF */}
+                <div className="pt-2 border-t border-[#F1F5F9] space-y-2">
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={ncfRequired}
+                      onChange={(e) => setNcfRequired(e.target.checked)}
+                      className="w-4 h-4 text-[#0284C7] rounded border-[#CBD5E1] focus:ring-[#0284C7] cursor-pointer"
+                    />
+                    <span className="text-xs font-extrabold text-[#0F172A] flex items-center gap-1">
+                      <span>🧾</span> ¿Requiere Comprobante Fiscal (RNC)?
+                    </span>
+                  </label>
 
+                  {ncfRequired && (
+                    <div className="pt-1 animate-fade-in-up">
+                      <input
+                        type="text"
+                        value={rncNumber}
+                        onChange={(e) => setRncNumber(e.target.value)}
+                        placeholder="Ingrese RNC o Cédula (Ej: 131-88995-2)..."
+                        className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-3 py-2 text-xs font-extrabold text-[#0F172A] placeholder-[#94A3B8]"
+                      />
+                    </div>
+                  )}
                 </div>
+
+                {/* BOTON GIGANTE COBRAR E IMPRIMIR */}
+                <button
+                  disabled={cart.length === 0}
+                  onClick={handleCheckout}
+                  className={`w-full py-4 rounded-2xl font-extrabold text-base tracking-wide flex items-center justify-center gap-2 transition-all ${
+                    cart.length === 0
+                      ? 'bg-[#F1F5F9] text-[#94A3B8] border border-[#E2E8F0] cursor-not-allowed'
+                      : 'bg-[#0284C7] hover:bg-[#0369A1] text-white shadow-xl shadow-[#0284C7]/25 cursor-pointer active:scale-[0.99]'
+                  }`}
+                >
+                  <span>🧾 COBRAR E IMPRIMIR</span>
+                </button>
 
               </div>
             </div>
@@ -2345,6 +2926,18 @@ function App() {
                 <span className="text-[#94A3B8]">Método Pago:</span>
                 <span className="font-bold text-[#F8FAFC]">{checkoutResult.metodo}</span>
               </div>
+              {checkoutResult.metodo === 'EFECTIVO' && (
+                <>
+                  <div className="flex justify-between border-b border-[#2A364B] pb-2">
+                    <span className="text-[#94A3B8]">Efectivo Recibido:</span>
+                    <span className="font-bold text-[#F8FAFC]">RD$ {(checkoutResult.recibido || checkoutResult.total).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between border-b border-[#2A364B] pb-2">
+                    <span className="text-[#94A3B8]">Devuelta (Cambio):</span>
+                    <span className="font-bold text-[#22C55E]">RD$ {(checkoutResult.devuelta || 0).toFixed(2)}</span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between pt-2 text-sm font-bold">
                 <span className="text-[#F8FAFC]">TOTAL COBRADO:</span>
                 <span className="text-[#22C55E] font-bold">RD$ {checkoutResult.total.toFixed(2)}</span>

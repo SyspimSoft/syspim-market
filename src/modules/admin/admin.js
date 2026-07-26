@@ -110,9 +110,6 @@
 
         grid.innerHTML = filtered.map(p => `
             <div class="pos-product-card" onclick="AdminModule.addToCart('${p.id}')">
-                <div class="product-img-box">
-                    <img src="${p.imagen_url || 'public/assets/placeholder.svg'}" alt="${p.nombre}" onerror="this.onerror=null; this.src='public/assets/placeholder.svg';">
-                </div>
                 <div class="product-info">
                     <span class="product-cat-tag">${p.categoria || 'General'}</span>
                     <h4 class="product-title" title="${p.nombre}">${p.nombre}</h4>
@@ -202,6 +199,11 @@
         if (subtotalText) subtotalText.textContent = `Subtotal: ${window.Helpers.formatRD$(total)}`;
         if (totalEl) totalEl.textContent = window.Helpers.formatRD$(total);
         if (btnCheckout) btnCheckout.disabled = false;
+
+        // Auto-scroll hacia abajo para mostrar siempre el último producto agregado al final
+        setTimeout(() => {
+            container.scrollTop = container.scrollHeight;
+        }, 50);
     }
 
     function updateCartQty(productId, delta) {
@@ -457,8 +459,10 @@
                 </tbody>
             </table>
 
-            <div id="receipt-totals" class="receipt-totals-box">
-                TOTAL: ${formatMoney(total)}
+            <div id="receipt-totals" class="receipt-totals-box" style="text-align:right; font-weight:bold; font-size:11px; margin-top:6px; border-top:1px solid #000; padding-top:4px;">
+                TOTAL A PAGAR: ${formatMoney(total)}
+                ${order.recibido ? `<br>EFECTIVO RECIBIDO: ${formatMoney(order.recibido)}` : ''}
+                ${order.devuelta !== undefined && order.recibido ? `<br>DEVUELTA (CAMBIO): ${formatMoney(order.devuelta)}` : ''}
             </div>
 
             <div class="receipt-token-box ticket-token">
