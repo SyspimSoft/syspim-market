@@ -110,7 +110,7 @@
           setTimeout(() => setToastMsg(null), 3000);
         };
 
-        // Escuchar nuevos pedidos y cambios en tiempo real por BroadcastChannel, Storage y Polling
+        // Escuchar nuevos pedidos y consultar Supabase Cloud en tiempo real
         useEffect(() => {
           let broadcast;
           try {
@@ -119,12 +119,12 @@
               if (event.data && event.data.order) {
                 const newO = event.data.order;
                 setTrips(prev => {
-                  if (prev.some(t => t.id === newO.id)) {
-                    return prev.map(t => t.id === newO.id ? { ...t, ...newO } : t);
+                  if (prev.some(t => t.id === newO.id || (t.uuid && t.uuid === newO.uuid))) {
+                    return prev.map(t => (t.id === newO.id || (t.uuid && t.uuid === newO.uuid)) ? { ...t, ...newO } : t);
                   }
                   return [{ ...newO, estado: newO.estado || 'en_camino' }, ...prev];
                 });
-                showToast(`🛵 ¡Pedido #${newO.id.slice(-6)} actualizado!`);
+                showToast(`🛵 ¡Viaje #${newO.id.slice(-6)} actualizado!`);
               }
             };
           } catch (e) {}
@@ -139,24 +139,61 @@
           };
           window.addEventListener('storage', handleStorage);
 
-          const interval = setInterval(() => {
-            try {
-              const saved = localStorage.getItem('syspim_pos_pedidos');
-              if (saved) {
-                const parsed = JSON.parse(saved);
-                if (Array.isArray(parsed) && JSON.stringify(parsed) !== JSON.stringify(trips)) {
-                  setTrips(parsed);
-                }
-              }
-            } catch(e){}
-          }, 1000);
+          // Polling de Supabase Cloud cada 3s para el celular del delivery
+          const fetchSupabaseDeliveries = () => {
+            const sbClient = (window.ColmadoSupabase && window.ColmadoSupabase.client) || window.supabaseClient;
+            if (sbClient) {
+              sbClient.from('pedidos').select('*').order('created_at', { ascending: false }).limit(20)
+                .then(({ data }) => {
+                  if (data && Array.isArray(data)) {
+                    setTrips(prev => {
+                      let updated = [...prev];
+                      data.forEach(ord => {
+                        const isUuid = (ord.id || '').length > 20 && (ord.id || '').includes('-');
+                        const displayId = isUuid ? ('PED-' + ord.id.slice(-6).toUpperCase()) : ord.id;
+                        
+                        let details = ord.detalles;
+                        if (typeof details === 'string') {
+                          try { details = JSON.parse(details); } catch(e){ details = null; }
+                        }
+                        if (!details || !Array.isArray(details)) {
+                          details = [{ cantidad: 1, nombre: 'Entrega a Domicilio', precio_unitario: Number(ord.monto_total || 0) }];
+                        }
+
+                        const normalized = {
+                          ...ord,
+                          id: displayId,
+                          uuid: ord.id,
+                          estado: ord.estado || ord.status || 'en_camino',
+                          status: ord.estado || ord.status || 'en_camino',
+                          metodo_pago: ord.metodo_pago ? (ord.metodo_pago.charAt(0).toUpperCase() + ord.metodo_pago.slice(1)) : 'Efectivo',
+                          monto_total: Number(ord.monto_total || ord.total || 0),
+                          detalles: details
+                        };
+
+                        const idx = updated.findIndex(t => t.id === normalized.id || (t.uuid && t.uuid === normalized.uuid));
+                        if (idx >= 0) {
+                          updated[idx] = { ...updated[idx], ...normalized };
+                        } else {
+                          updated.unshift(normalized);
+                        }
+                      });
+                      return updated;
+                    });
+                  }
+                }).catch(() => {});
+            }
+          };
+
+          fetchSupabaseDeliveries();
+          const supabaseInterval = setInterval(fetchSupabaseDeliveries, 3000);
 
           return () => { 
             try { broadcast?.close(); } catch(e){} 
             window.removeEventListener('storage', handleStorage);
-            clearInterval(interval);
+            clearInterval(supabaseInterval);
           };
-        }, [trips]);
+        }, []);
 
         // Búsqueda manual de token
         const handleTokenSearch = (e) => {
@@ -191,8 +228,9 @@
         // Cambiar estado de un viaje
         const updateTripStatus = (tripId, newStatus) => {
           setTrips(prev => {
+            const targetOrder = prev.find(t => t.id === tripId || t.uuid === tripId);
             const updatedList = prev.map(t => {
-              if (t.id === tripId) {
+              if (t.id === tripId || (t.uuid && t.uuid === tripId)) {
                 return { ...t, estado: newStatus, status: newStatus };
               }
               return t;
@@ -202,16 +240,18 @@
               localStorage.setItem('syspim_pos_pedidos', JSON.stringify(updatedList));
               localStorage.setItem('syspim_delivery_trips', JSON.stringify(updatedList));
               
-              const targetOrder = updatedList.find(t => t.id === tripId);
               const broadcast = new BroadcastChannel('syspim_orders_channel');
-              broadcast.postMessage({ type: 'STATUS_UPDATE', order: targetOrder });
+              broadcast.postMessage({ type: 'STATUS_UPDATE', order: { ...targetOrder, estado: newStatus, status: newStatus } });
               broadcast.close();
             } catch(e){}
 
-            // Actualizar Supabase Realtime si está activo
-            const sbClient = window.supabaseClient || window.ColmadoSupabase?.client;
-            if (sbClient) {
-              sbClient.from('pedidos').update({ estado: newStatus, status: newStatus }).eq('id', tripId);
+            // Actualizar Supabase Realtime si está activo con el UUID válido
+            const sbClient = (window.ColmadoSupabase && window.ColmadoSupabase.client) || window.supabaseClient;
+            if (sbClient && targetOrder) {
+              const dbId = targetOrder.uuid || targetOrder.id;
+              if (dbId && dbId.includes('-')) {
+                sbClient.from('pedidos').update({ estado: newStatus }).eq('id', dbId).then(() => {}).catch(() => {});
+              }
             }
 
             return updatedList;
