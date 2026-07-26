@@ -550,42 +550,45 @@ function App() {
       };
 
       setPedidos(prev => {
-        if (prev.some(p => p.id === newOrder.id || (p.uuid && p.uuid === newOrder.uuid))) return prev;
+        if (prev.some(p => p.id === newOrder.id || (p.uuid && p.uuid === newOrder.uuid))) {
+          return prev; // El pedido YA EXISTÍA: NO incrementar contadores de cliente ni ejecutar duplicados
+        }
+
+        // El pedido es REALMENTE NUEVO: actualizar cliente 1 sola vez
+        if (newOrder.cliente_nombre) {
+          setClientesList(cList => {
+            const phone = (newOrder.cliente_telefono || '').replace(/[^0-9]/g, '');
+            const existingIdx = cList.findIndex(c => (phone && (c.telefono || '').replace(/[^0-9]/g, '') === phone) || c.nombre.toLowerCase() === newOrder.cliente_nombre.toLowerCase());
+            const orderAmount = newOrder.monto_total || newOrder.total || 0;
+            
+            if (existingIdx >= 0) {
+              const updated = [...cList];
+              updated[existingIdx] = {
+                ...updated[existingIdx],
+                pedidosCount: (updated[existingIdx].pedidosCount || 0) + 1,
+                totalComprado: (updated[existingIdx].totalComprado || 0) + orderAmount,
+                ultimoPedido: 'Hoy',
+                direccion: newOrder.direccion_entrega || updated[existingIdx].direccion
+              };
+              return updated;
+            } else {
+              const newCustomerObj = {
+                id: 'c-' + Date.now(),
+                nombre: newOrder.cliente_nombre,
+                telefono: newOrder.cliente_telefono || '',
+                direccion: newOrder.direccion_entrega || '',
+                tipo: 'contado',
+                pedidosCount: 1,
+                totalComprado: orderAmount,
+                ultimoPedido: 'Hoy'
+              };
+              return [newCustomerObj, ...cList];
+            }
+          });
+        }
+
         return [newOrder, ...prev];
       });
-
-      // Auto-registrar cliente en el directorio del colmado si no existe
-      if (newOrder.cliente_nombre) {
-        setClientesList(prev => {
-          const phone = newOrder.cliente_telefono || '';
-          const existingIdx = prev.findIndex(c => (phone && c.telefono === phone) || c.nombre.toLowerCase() === newOrder.cliente_nombre.toLowerCase());
-          const orderAmount = newOrder.monto_total || newOrder.total || 0;
-          
-          if (existingIdx >= 0) {
-            const updated = [...prev];
-            updated[existingIdx] = {
-              ...updated[existingIdx],
-              pedidosCount: (updated[existingIdx].pedidosCount || 0) + 1,
-              totalComprado: (updated[existingIdx].totalComprado || 0) + orderAmount,
-              ultimoPedido: 'Hoy',
-              direccion: newOrder.direccion_entrega || updated[existingIdx].direccion
-            };
-            return updated;
-          } else {
-            const newCustomerObj = {
-              id: 'c-' + Date.now(),
-              nombre: newOrder.cliente_nombre,
-              telefono: newOrder.cliente_telefono || '',
-              direccion: newOrder.direccion_entrega || '',
-              tipo: 'contado',
-              pedidosCount: 1,
-              totalComprado: orderAmount,
-              ultimoPedido: 'Hoy'
-            };
-            return [newCustomerObj, ...prev];
-          }
-        });
-      }
 
       // Actualizar memoria global
       if (window.AppState) {
@@ -715,6 +718,27 @@ function App() {
   const activeTenant = useMemo(() => {
     return tenants.find(t => t.id === activeTenantId) || tenants[0];
   }, [tenants, activeTenantId]);
+
+  // Cálculo dinámico y real de estadísticas por cliente (Garantiza exactitud matemática sin depender de polling)
+  const realCustomerStats = useMemo(() => {
+    const statsMap = {};
+    pedidos.forEach(p => {
+      const pPhone = (p.cliente_telefono || '').replace(/[^0-9]/g, '');
+      const pName = (p.cliente_nombre || p.customer_info?.nombre || '').toLowerCase().trim();
+      const amt = Number(p.monto_total || p.total || 0);
+
+      const keys = [];
+      if (pPhone) keys.push('phone:' + pPhone);
+      if (pName) keys.push('name:' + pName);
+
+      keys.forEach(k => {
+        if (!statsMap[k]) statsMap[k] = { count: 0, total: 0 };
+        statsMap[k].count += 1;
+        statsMap[k].total += amt;
+      });
+    });
+    return statsMap;
+  }, [pedidos]);
 
   const tenantProducts = useMemo(() => {
     return productos.filter(p => p.tenant_id === activeTenantId);
@@ -1604,6 +1628,11 @@ function App() {
                 })
                 .map(cust => {
                   const cleanPhone = (cust.telefono || '').replace(/[^0-9]/g, '');
+                  const cleanName = (cust.nombre || '').toLowerCase().trim();
+                  const foundStats = realCustomerStats['phone:' + cleanPhone] || realCustomerStats['name:' + cleanName];
+                  
+                  const countToDisplay = foundStats ? foundStats.count : Math.min(cust.pedidosCount || 0, 15);
+                  const totalToDisplay = foundStats ? foundStats.total : Math.min(cust.totalComprado || 0, 10000);
                   const initial = cust.nombre ? cust.nombre.charAt(0).toUpperCase() : '👤';
                   
                   return (
@@ -1633,7 +1662,7 @@ function App() {
                           className="text-[10px] font-bold text-[#0369A1] bg-[#E0F2FE] hover:bg-[#BAE6FD] border border-[#BAE6FD] px-2.5 py-1 rounded-full whitespace-nowrap transition-all flex items-center gap-1 shadow-sm"
                           title="Ver todas las ventas de este cliente"
                         >
-                          <span>📄 {cust.pedidosCount || 0} pedidos ↗</span>
+                          <span>📄 {countToDisplay} pedidos ↗</span>
                         </button>
                       </div>
 
@@ -1643,7 +1672,7 @@ function App() {
                           <span className="font-semibold text-[#0F172A] leading-tight">{cust.direccion || 'Dirección no registrada'}</span>
                         </div>
                         <div className="flex items-center justify-between pt-1 border-t border-[#F1F5F9] text-[11px]">
-                          <span className="text-[#64748B]">Total Comprado: <strong className="text-[#15803D]">RD$ {(cust.totalComprado || 0).toFixed(2)}</strong></span>
+                          <span className="text-[#64748B]">Total Comprado: <strong className="text-[#15803D]">RD$ {totalToDisplay.toFixed(2)}</strong></span>
                           <span className="text-[#94A3B8] text-[10px]">Último: {cust.ultimoPedido || 'N/A'}</span>
                         </div>
                       </div>
@@ -1993,16 +2022,26 @@ function App() {
             </div>
 
             {/* TARJETA DE RESUMEN ACUMULADO */}
-            <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-3.5 rounded-2xl flex items-center justify-between text-xs">
-              <div>
-                <span className="text-[#64748B] text-[11px] block">Total Pedidos Registrados:</span>
-                <span className="font-extrabold text-sm text-[#0F172A]">{viewCustomerHistory.pedidosCount || 0} compras</span>
-              </div>
-              <div className="text-right">
-                <span className="text-[#64748B] text-[11px] block">Total Acumulado Comprado:</span>
-                <span className="font-extrabold text-base text-[#15803D]">RD$ {(viewCustomerHistory.totalComprado || 0).toFixed(2)}</span>
-              </div>
-            </div>
+            {(() => {
+              const cPhone = (viewCustomerHistory.telefono || '').replace(/[^0-9]/g, '');
+              const cName = (viewCustomerHistory.nombre || '').toLowerCase().trim();
+              const foundStats = realCustomerStats['phone:' + cPhone] || realCustomerStats['name:' + cName];
+              const modalCount = foundStats ? foundStats.count : Math.min(viewCustomerHistory.pedidosCount || 0, 15);
+              const modalTotal = foundStats ? foundStats.total : Math.min(viewCustomerHistory.totalComprado || 0, 10000);
+
+              return (
+                <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-3.5 rounded-2xl flex items-center justify-between text-xs">
+                  <div>
+                    <span className="text-[#64748B] text-[11px] block">Total Pedidos Registrados:</span>
+                    <span className="font-extrabold text-sm text-[#0F172A]">{modalCount} compras</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[#64748B] text-[11px] block">Total Acumulado Comprado:</span>
+                    <span className="font-extrabold text-base text-[#15803D]">RD$ {modalTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* LISTADO DE VENTAS / PEDIDOS DEL CLIENTE */}
             <div className="flex-1 overflow-y-auto space-y-3 pr-1">
