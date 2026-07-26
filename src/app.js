@@ -468,6 +468,7 @@ function App() {
 
   const [showSharePwaModal, setShowSharePwaModal] = useState(false);
   const [sharePhone, setSharePhone] = useState('');
+  const [orderSubFilter, setOrderSubFilter] = useState('active'); // 'active' | 'completed' | 'all'
 
   // Modales & Toast
   const [checkoutResult, setCheckoutResult] = useState(null);
@@ -749,7 +750,14 @@ function App() {
               {[
                 { id: 'pos', icon: '🛒', label: 'Punto de Venta (POS)' },
                 { id: 'inventory', icon: '📦', label: `Inventario (${tenantProducts.length})` },
-                { id: 'orders', icon: '📋', label: `Pedidos & Delivery (${pedidos.length})` },
+                { 
+                  id: 'orders', 
+                  icon: '📋', 
+                  label: `Pedidos (${pedidos.filter(p => {
+                    const st = p.estado || p.status || 'pendiente';
+                    return st === 'pendiente' || st === 'en_camino' || st === 'despachado';
+                  }).length} activos)` 
+                },
                 { id: 'customers', icon: '👥', label: `Clientes (${clientesList.length})` }
               ].map(m => (
                 <button
@@ -1162,181 +1170,258 @@ function App() {
         {/* ================= MODULO 3: PEDIDOS ================= */}
         {activeTab === 'orders' && (
           <div className="bg-[#FFFFFF] border border-[#E2E8F0] p-6 rounded-[20px] shadow-[0_4px_20px_rgba(0,0,0,0.04)] space-y-5 animate-fade-in-up">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-lg text-[#0F172A] font-jakarta">📋 Pedidos del Colmado & Delivery</h3>
-              <button 
-                onClick={() => {
-                  if (window.AdminModule && window.AdminModule.unlockAudioContext) {
-                    window.AdminModule.unlockAudioContext();
-                  }
-                  showToast('🔔 Alertas de audio y Realtime activas');
-                }}
-                className="px-4 py-2 bg-[#0284C7] hover:bg-[#0369A1] text-white rounded-full text-xs font-bold shadow-md shadow-[#0284C7]/20 transition-all"
-              >
-                🔔 Conectar POS / Activar Sonido
-              </button>
-            </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              {pedidos.map(ped => (
-                <div key={ped.id} className="bg-[#F8FAFC] border border-[#E2E8F0] p-5 rounded-[16px] space-y-3 shadow-sm hover:border-[#BAE6FD] transition-all">
-                  <div className="flex justify-between items-center pb-2 border-b border-[#E2E8F0]">
+            {(() => {
+              const activeList = pedidos.filter(p => {
+                const st = p.estado || p.status || 'pendiente';
+                return st === 'pendiente' || st === 'en_camino' || st === 'despachado';
+              });
+              const completedList = pedidos.filter(p => {
+                const st = p.estado || p.status;
+                return st === 'entregado' || st === 'completado';
+              });
+
+              const listToRender = orderSubFilter === 'active' 
+                ? activeList 
+                : orderSubFilter === 'completed' 
+                ? completedList 
+                : pedidos;
+
+              return (
+                <React.Fragment>
+                  {/* HEADER & SUB-FILTROS DE PEDIDOS */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-[#F1F5F9]">
                     <div>
-                      <span className="font-extrabold text-sm text-[#0F172A] font-jakarta block">#{ped.id.slice(-8)} • {ped.cliente_nombre || ped.customer_info?.nombre || 'Cliente'}</span>
-                      <span className="text-[11px] text-[#64748B] font-mono">📞 {ped.cliente_telefono || 'Sin Teléfono'}</span>
+                      <h3 className="font-extrabold text-xl text-[#0F172A] font-jakarta">📋 Pedidos del Colmado</h3>
+                      <p className="text-xs text-[#64748B] mt-0.5">Control de órdenes entrantes, despachos en camino e historial de entregas.</p>
                     </div>
-                    {/* SELECTOR DE ESTADO INTERACTIVO */}
-                    <select
-                      value={ped.estado || ped.status || 'pendiente'}
-                      onChange={(e) => {
-                        const newStatus = e.target.value;
-                        setPedidos(prev => prev.map(p => {
-                          if (p.id === ped.id) {
-                            const updated = { ...p, estado: newStatus, status: newStatus };
-                            try {
-                              const broadcast = new BroadcastChannel('syspim_orders_channel');
-                              broadcast.postMessage({ type: 'STATUS_UPDATE', order: updated });
-                              broadcast.close();
-                            } catch (err) {}
-                            return updated;
-                          }
-                          return p;
-                        }));
-                        setToast(`✅ Estado del pedido marcado como: ${newStatus.toUpperCase()}`);
+
+                    <button 
+                      onClick={() => {
+                        if (window.AdminModule && window.AdminModule.unlockAudioContext) {
+                          window.AdminModule.unlockAudioContext();
+                        }
+                        showToast('🔔 Alertas de audio y Realtime activas');
                       }}
-                      className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase border cursor-pointer focus:outline-none transition-all ${
-                        (ped.estado || ped.status) === 'completado' || (ped.estado || ped.status) === 'entregado'
-                          ? 'bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]'
-                          : (ped.estado || ped.status) === 'en_camino' || (ped.estado || ped.status) === 'despachado'
-                          ? 'bg-[#E0F2FE] text-[#0284C7] border-[#BAE6FD]'
-                          : (ped.estado || ped.status) === 'cancelado'
-                          ? 'bg-[#FEE2E2] text-[#DC2626] border-[#FECACA]'
-                          : 'bg-[#FEF3C7] text-[#B45309] border-[#FDE68A]'
+                      className="px-4 py-2 bg-[#0284C7] hover:bg-[#0369A1] text-white rounded-full text-xs font-bold shadow-md shadow-[#0284C7]/20 transition-all flex-shrink-0"
+                    >
+                      🔔 Conectar POS / Activar Sonido
+                    </button>
+                  </div>
+
+                  {/* PESTAÑAS DE SUB-FILTRO */}
+                  <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pt-1">
+                    <button
+                      onClick={() => setOrderSubFilter('active')}
+                      className={`px-4 py-2 rounded-full text-xs font-extrabold transition-all border flex items-center gap-2 whitespace-nowrap ${
+                        orderSubFilter === 'active'
+                          ? 'bg-[#E0F2FE] text-[#0284C7] border-[#BAE6FD] shadow-sm'
+                          : 'bg-[#F8FAFC] text-[#64748B] border-[#E2E8F0] hover:text-[#0F172A]'
                       }`}
                     >
-                      <option value="pendiente" className="bg-white text-[#B45309]">🟡 PENDIENTE</option>
-                      <option value="en_camino" className="bg-white text-[#0284C7]">🛵 EN CAMINO</option>
-                      <option value="completado" className="bg-white text-[#15803D]">✅ ENTREGADO</option>
-                      <option value="cancelado" className="bg-white text-[#DC2626]">❌ CANCELADO</option>
-                    </select>
+                      <span>⚡ En Proceso / Activos</span>
+                      <span className="bg-[#0284C7] text-white px-2 py-0.5 rounded-full text-[10px] font-bold">{activeList.length}</span>
+                    </button>
+                    <button
+                      onClick={() => setOrderSubFilter('completed')}
+                      className={`px-4 py-2 rounded-full text-xs font-extrabold transition-all border flex items-center gap-2 whitespace-nowrap ${
+                        orderSubFilter === 'completed'
+                          ? 'bg-[#DCFCE7] text-[#15803D] border-[#86EFAC] shadow-sm'
+                          : 'bg-[#F8FAFC] text-[#64748B] border-[#E2E8F0] hover:text-[#0F172A]'
+                      }`}
+                    >
+                      <span>✅ Historial Entregados</span>
+                      <span className="bg-[#15803D] text-white px-2 py-0.5 rounded-full text-[10px] font-bold">{completedList.length}</span>
+                    </button>
+                    <button
+                      onClick={() => setOrderSubFilter('all')}
+                      className={`px-4 py-2 rounded-full text-xs font-extrabold transition-all border flex items-center gap-2 whitespace-nowrap ${
+                        orderSubFilter === 'all'
+                          ? 'bg-[#0F172A] text-white border-[#0F172A] shadow-sm'
+                          : 'bg-[#F8FAFC] text-[#64748B] border-[#E2E8F0] hover:text-[#0F172A]'
+                      }`}
+                    >
+                      <span>📋 Todos</span>
+                      <span className="bg-[#64748B] text-white px-2 py-0.5 rounded-full text-[10px] font-bold">{pedidos.length}</span>
+                    </button>
                   </div>
 
-                  <div className="space-y-1 text-[#64748B]">
-                    <p><strong className="text-[#0F172A]">📍 Dirección:</strong> {ped.direccion_entrega || ped.customer_info?.direccion || 'Recogida local'}</p>
-                    <p><strong className="text-[#0F172A]">💳 Pago:</strong> <span className="text-[#0369A1] font-bold">{ped.metodo_pago}</span></p>
-                    <p className="font-mono text-[11px]"><strong className="text-[#0F172A]">🔑 Token Repartidor:</strong> <strong className="text-[#0284C7] font-bold">{ped.delivery_token || 'DEL-000000'}</strong></p>
-                  </div>
+                  {/* MENSAJE CUANDO LA SECCIÓN ESTÁ VACÍA */}
+                  {listToRender.length === 0 ? (
+                    <div className="bg-[#F8FAFC] border border-dashed border-[#CBD5E1] p-10 rounded-[20px] text-center space-y-2">
+                      <span className="text-3xl block">✨</span>
+                      <h4 className="font-extrabold text-sm text-[#0F172A]">No hay pedidos en esta sección</h4>
+                      <p className="text-xs text-[#64748B]">
+                        {orderSubFilter === 'active' 
+                          ? '¡Excelente! Todos los pedidos han sido despachados y entregados con éxito.' 
+                          : 'Aún no hay pedidos en este historial.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                      {listToRender.map(ped => (
+                        <div key={ped.id} className="bg-[#F8FAFC] border border-[#E2E8F0] p-5 rounded-[16px] space-y-3 shadow-sm hover:border-[#BAE6FD] transition-all">
+                          <div className="flex justify-between items-center pb-2 border-b border-[#E2E8F0]">
+                            <div>
+                              <span className="font-extrabold text-sm text-[#0F172A] font-jakarta block">#{ped.id.slice(-8)} • {ped.cliente_nombre || ped.customer_info?.nombre || 'Cliente'}</span>
+                              <span className="text-[11px] text-[#64748B] font-mono">📞 {ped.cliente_telefono || 'Sin Teléfono'}</span>
+                            </div>
+                            {/* SELECTOR DE ESTADO INTERACTIVO */}
+                            <select
+                              value={ped.estado || ped.status || 'pendiente'}
+                              onChange={(e) => {
+                                const newStatus = e.target.value;
+                                setPedidos(prev => prev.map(p => {
+                                  if (p.id === ped.id) {
+                                    const updated = { ...p, estado: newStatus, status: newStatus };
+                                    try {
+                                      const broadcast = new BroadcastChannel('syspim_orders_channel');
+                                      broadcast.postMessage({ type: 'STATUS_UPDATE', order: updated });
+                                      broadcast.close();
+                                    } catch (err) {}
+                                    return updated;
+                                  }
+                                  return p;
+                                }));
+                                setToast(`✅ Estado del pedido marcado como: ${newStatus.toUpperCase()}`);
+                              }}
+                              className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase border cursor-pointer focus:outline-none transition-all ${
+                                (ped.estado || ped.status) === 'completado' || (ped.estado || ped.status) === 'entregado'
+                                  ? 'bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]'
+                                  : (ped.estado || ped.status) === 'en_camino' || (ped.estado || ped.status) === 'despachado'
+                                  ? 'bg-[#E0F2FE] text-[#0284C7] border-[#BAE6FD]'
+                                  : (ped.estado || ped.status) === 'cancelado'
+                                  ? 'bg-[#FEE2E2] text-[#DC2626] border-[#FECACA]'
+                                  : 'bg-[#FEF3C7] text-[#B45309] border-[#FDE68A]'
+                              }`}
+                            >
+                              <option value="pendiente" className="bg-white text-[#B45309]">🟡 PENDIENTE</option>
+                              <option value="en_camino" className="bg-white text-[#0284C7]">🛵 EN CAMINO</option>
+                              <option value="completado" className="bg-white text-[#15803D]">✅ ENTREGADO</option>
+                              <option value="cancelado" className="bg-white text-[#DC2626]">❌ CANCELADO</option>
+                            </select>
+                          </div>
 
-                  {/* DESGLOSE DE PRODUCTOS SOLICITADOS */}
-                  {ped.detalles && ped.detalles.length > 0 && (
-                    <div className="bg-white border border-[#E2E8F0] p-2.5 rounded-xl space-y-1">
-                      <span className="text-[10px] font-bold uppercase text-[#64748B] block">Productos Solicitados:</span>
-                      {ped.detalles.map((d, idx) => (
-                        <div key={idx} className="flex justify-between text-[11px] text-[#0F172A]">
-                          <span>• {d.cantidad}x {d.nombre}</span>
-                          <span className="font-mono text-[#64748B]">RD$ {(d.precio_unitario * d.cantidad).toFixed(2)}</span>
+                          <div className="space-y-1 text-[#64748B]">
+                            <p><strong className="text-[#0F172A]">📍 Dirección:</strong> {ped.direccion_entrega || ped.customer_info?.direccion || 'Recogida local'}</p>
+                            <p><strong className="text-[#0F172A]">💳 Pago:</strong> <span className="text-[#0369A1] font-bold">{ped.metodo_pago}</span></p>
+                            <p className="font-mono text-[11px]"><strong className="text-[#0F172A]">🔑 Token Repartidor:</strong> <strong className="text-[#0284C7] font-bold">{ped.delivery_token || 'DEL-000000'}</strong></p>
+                          </div>
+
+                          {/* DESGLOSE DE PRODUCTOS SOLICITADOS */}
+                          {ped.detalles && ped.detalles.length > 0 && (
+                            <div className="bg-white border border-[#E2E8F0] p-2.5 rounded-xl space-y-1">
+                              <span className="text-[10px] font-bold uppercase text-[#64748B] block">Productos Solicitados:</span>
+                              {ped.detalles.map((d, idx) => (
+                                <div key={idx} className="flex justify-between text-[11px] text-[#0F172A]">
+                                  <span>• {d.cantidad}x {d.nombre}</span>
+                                  <span className="font-mono text-[#64748B]">RD$ {(d.precio_unitario * d.cantidad).toFixed(2)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pt-3 border-t border-[#E2E8F0]">
+                            <span className="font-extrabold text-[#15803D] text-base font-jakarta">
+                              RD$ {(ped.monto_total || ped.total || 0).toFixed(2)}
+                            </span>
+
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                              {/* BOTÓN RÁPIDO PARA CAMBIAR DE ESTADO PENDIENTE -> EN CAMINO -> ENTREGADO */}
+                              {(ped.estado || ped.status || 'pendiente') === 'pendiente' && (
+                                <button
+                                  onClick={() => {
+                                    setPedidos(prev => prev.map(p => p.id === ped.id ? { ...p, estado: 'en_camino', status: 'en_camino' } : p));
+                                    setToast(`🛵 Pedido marcado como EN CAMINO`);
+                                  }}
+                                  className="flex-1 sm:flex-initial px-3 py-2 bg-[#FEF3C7] hover:bg-[#FDE68A] text-[#B45309] border border-[#FDE68A] font-extrabold rounded-full text-xs flex items-center justify-center gap-1 transition-all"
+                                >
+                                  🛵 Despachar
+                                </button>
+                              )}
+
+                              {((ped.estado || ped.status) === 'en_camino' || (ped.estado || ped.status) === 'despachado') && (
+                                <button
+                                  onClick={() => {
+                                    setPedidos(prev => prev.map(p => p.id === ped.id ? { ...p, estado: 'completado', status: 'completado' } : p));
+                                    setToast(`✅ Pedido completado y marcado como ENTREGADO`);
+                                  }}
+                                  className="flex-1 sm:flex-initial px-3 py-2 bg-[#DCFCE7] hover:bg-[#BBF7D0] text-[#15803D] border border-[#86EFAC] font-extrabold rounded-full text-xs flex items-center justify-center gap-1 transition-all"
+                                >
+                                  ✅ Completar
+                                </button>
+                              )}
+
+                              {/* BOTÓN 1: IMPRIMIR TICKET TÉRMICO */}
+                              <button 
+                                onClick={() => {
+                                  if (window.AdminModule && window.AdminModule.acceptAndPrintOrder) {
+                                    window.AdminModule.acceptAndPrintOrder(ped.id, ped);
+                                  } else {
+                                    const receipt = document.getElementById('thermal-receipt');
+                                    if (receipt) {
+                                      receipt.innerHTML = `
+                                        <div style="text-align:center; font-family:monospace; font-size:12px; padding:10px;">
+                                          <h2>${activeTenant?.nombre || 'COLMADO DON PEDRO'}</h2>
+                                          <p>PEDIDO #${ped.id.slice(-8)}</p>
+                                          <hr/>
+                                          <p style="text-align:left;">
+                                            <strong>CLIENTE:</strong> ${ped.cliente_nombre || 'Cliente'}<br/>
+                                            <strong>TEL:</strong> ${ped.cliente_telefono || ''}<br/>
+                                            <strong>DIR:</strong> ${ped.direccion_entrega || ''}<br/>
+                                            <strong>PAGO:</strong> ${ped.metodo_pago || 'Efectivo'}
+                                          </p>
+                                          <hr/>
+                                          <p style="font-size:14px; font-weight:bold;">TOTAL: RD$ ${(ped.monto_total || 0).toFixed(2)}</p>
+                                          <p style="background:#000; color:#fff; padding:4px; font-weight:bold;">TOKEN: ${ped.delivery_token || 'DEL-000000'}</p>
+                                        </div>
+                                      `;
+                                    }
+                                    window.print();
+                                  }
+                                }}
+                                className="flex-1 sm:flex-initial px-3.5 py-2 bg-[#0284C7] hover:bg-[#0369A1] text-white font-bold rounded-full text-xs shadow-md shadow-[#0284C7]/20 flex items-center justify-center gap-1 transition-all"
+                              >
+                                🖨️ Imprimir Ticket
+                              </button>
+
+                              {/* BOTÓN 2: ENVIAR PEDIDO AL WHATSAPP DEL REPARTIDOR / DELIVERY */}
+                              <button
+                                onClick={() => {
+                                  const repartidorPhone = prompt('Ingresa el WhatsApp del Delivery / Repartidor:', '8095550199');
+                                  if (!repartidorPhone) return;
+
+                                  // Construir enlace directo de ejecución para el repartidor
+                                  const baseUrl = window.location.origin + window.location.pathname.replace(/\/index\.html$/, '/');
+                                  const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+                                  const deliveryLink = `${cleanBaseUrl}delivery.html?token=${ped.delivery_token || ped.id}`;
+
+                                  const colmado = activeTenant?.nombre || 'COLMADO DON PEDRO';
+                                  const rawMsg = `🛵 DESPACHO DE DELIVERY - ${colmado}\n\n` +
+                                                 `📦 Pedido #${ped.id.slice(-8)}\n` +
+                                                 `👤 Cliente: ${ped.cliente_nombre || 'Cliente'}\n` +
+                                                 `📞 Teléfono: ${ped.cliente_telefono || 'N/A'}\n` +
+                                                 `📍 Dirección: ${ped.direccion_entrega}\n\n` +
+                                                 `💳 Forma de Pago: ${ped.metodo_pago}\n` +
+                                                 `💵 TOTAL A COBRAR: RD$ ${(ped.monto_total || 0).toFixed(2)}\n\n` +
+                                                 `🔑 Abrir en Panel de Delivery:\n${deliveryLink}`;
+
+                                  const encodedMsg = encodeURIComponent(rawMsg);
+                                  window.open(`https://wa.me/${repartidorPhone.replace(/[^0-9]/g, '')}?text=${encodedMsg}`, '_blank');
+                                }}
+                                className="flex-1 sm:flex-initial px-3.5 py-2 bg-[#15803D] hover:bg-[#166534] text-white font-bold rounded-full text-xs shadow-md shadow-[#15803D]/20 flex items-center justify-center gap-1 transition-all"
+                              >
+                                📲 Enviar a Delivery
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
                   )}
-
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pt-3 border-t border-[#E2E8F0]">
-                    <span className="font-extrabold text-[#15803D] text-base font-jakarta">
-                      RD$ {(ped.monto_total || ped.total || 0).toFixed(2)}
-                    </span>
-
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                      {/* BOTÓN RÁPIDO PARA CAMBIAR DE ESTADO PENDIENTE -> EN CAMINO -> ENTREGADO */}
-                      {(ped.estado || ped.status || 'pendiente') === 'pendiente' && (
-                        <button
-                          onClick={() => {
-                            setPedidos(prev => prev.map(p => p.id === ped.id ? { ...p, estado: 'en_camino', status: 'en_camino' } : p));
-                            setToast(`🛵 Pedido marcado como EN CAMINO`);
-                          }}
-                          className="flex-1 sm:flex-initial px-3 py-2 bg-[#FEF3C7] hover:bg-[#FDE68A] text-[#B45309] border border-[#FDE68A] font-extrabold rounded-full text-xs flex items-center justify-center gap-1 transition-all"
-                        >
-                          🛵 Despachar
-                        </button>
-                      )}
-
-                      {((ped.estado || ped.status) === 'en_camino' || (ped.estado || ped.status) === 'despachado') && (
-                        <button
-                          onClick={() => {
-                            setPedidos(prev => prev.map(p => p.id === ped.id ? { ...p, estado: 'completado', status: 'completado' } : p));
-                            setToast(`✅ Pedido completado y marcado como ENTREGADO`);
-                          }}
-                          className="flex-1 sm:flex-initial px-3 py-2 bg-[#DCFCE7] hover:bg-[#BBF7D0] text-[#15803D] border border-[#86EFAC] font-extrabold rounded-full text-xs flex items-center justify-center gap-1 transition-all"
-                        >
-                          ✅ Completar
-                        </button>
-                      )}
-
-                      {/* BOTÓN 1: IMPRIMIR TICKET TÉRMICO */}
-                      <button 
-                        onClick={() => {
-                          if (window.AdminModule && window.AdminModule.acceptAndPrintOrder) {
-                            window.AdminModule.acceptAndPrintOrder(ped.id, ped);
-                          } else {
-                            const receipt = document.getElementById('thermal-receipt');
-                            if (receipt) {
-                              receipt.innerHTML = `
-                                <div style="text-align:center; font-family:monospace; font-size:12px; padding:10px;">
-                                  <h2>${activeTenant?.nombre || 'COLMADO DON PEDRO'}</h2>
-                                  <p>PEDIDO #${ped.id.slice(-8)}</p>
-                                  <hr/>
-                                  <p style="text-align:left;">
-                                    <strong>CLIENTE:</strong> ${ped.cliente_nombre || 'Cliente'}<br/>
-                                    <strong>TEL:</strong> ${ped.cliente_telefono || ''}<br/>
-                                    <strong>DIR:</strong> ${ped.direccion_entrega || ''}<br/>
-                                    <strong>PAGO:</strong> ${ped.metodo_pago || 'Efectivo'}
-                                  </p>
-                                  <hr/>
-                                  <p style="font-size:14px; font-weight:bold;">TOTAL: RD$ ${(ped.monto_total || 0).toFixed(2)}</p>
-                                  <p style="background:#000; color:#fff; padding:4px; font-weight:bold;">TOKEN: ${ped.delivery_token || 'DEL-000000'}</p>
-                                </div>
-                              `;
-                            }
-                            window.print();
-                          }
-                        }}
-                        className="flex-1 sm:flex-initial px-3.5 py-2 bg-[#0284C7] hover:bg-[#0369A1] text-white font-bold rounded-full text-xs shadow-md shadow-[#0284C7]/20 flex items-center justify-center gap-1 transition-all"
-                      >
-                        🖨️ Imprimir Ticket
-                      </button>
-
-                      {/* BOTÓN 2: ENVIAR PEDIDO AL WHATSAPP DEL REPARTIDOR / DELIVERY */}
-                      <button
-                        onClick={() => {
-                          const repartidorPhone = prompt('Ingresa el WhatsApp del Delivery / Repartidor:', '8095550199');
-                          if (!repartidorPhone) return;
-
-                          // Construir enlace directo de ejecución para el repartidor
-                          const baseUrl = window.location.origin + window.location.pathname.replace(/\/index\.html$/, '/');
-                          const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
-                          const deliveryLink = `${cleanBaseUrl}delivery.html?token=${ped.delivery_token || ped.id}`;
-
-                          const colmado = activeTenant?.nombre || 'COLMADO DON PEDRO';
-                          const rawMsg = `🛵 DESPACHO DE DELIVERY - ${colmado}\n\n` +
-                                         `📦 Pedido #${ped.id.slice(-8)}\n` +
-                                         `👤 Cliente: ${ped.cliente_nombre || 'Cliente'}\n` +
-                                         `📞 Teléfono: ${ped.cliente_telefono || 'N/A'}\n` +
-                                         `📍 Dirección: ${ped.direccion_entrega}\n\n` +
-                                         `💳 Forma de Pago: ${ped.metodo_pago}\n` +
-                                         `💵 TOTAL A COBRAR: RD$ ${(ped.monto_total || 0).toFixed(2)}\n\n` +
-                                         `🔑 Abrir en Panel de Delivery:\n${deliveryLink}`;
-
-                          const encodedMsg = encodeURIComponent(rawMsg);
-                          window.open(`https://wa.me/${repartidorPhone.replace(/[^0-9]/g, '')}?text=${encodedMsg}`, '_blank');
-                        }}
-                        className="flex-1 sm:flex-initial px-3.5 py-2 bg-[#15803D] hover:bg-[#166534] text-white font-bold rounded-full text-xs shadow-md shadow-[#15803D]/20 flex items-center justify-center gap-1 transition-all"
-                      >
-                        📲 Enviar a Delivery
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                </React.Fragment>
+              );
+            })()}
           </div>
         )}
 
