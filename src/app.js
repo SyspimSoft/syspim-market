@@ -418,16 +418,22 @@ function App() {
     } catch (e) {}
     return window.AppState?.pedidos || [
       {
-        id: 'PED-9081',
-        cliente_nombre: 'Carlos Mendoza',
-        cliente_telefono: '8095550199',
-        direccion_entrega: 'Calle Pepillo Salcedo #14, Ens. La Fe',
-        monto_total: 545.00,
-        metodo_pago: 'Efectivo (Paga con $1,000 - Devuelta: $455.00)',
-        estado: 'entregado',
-        delivery_token: 'DEL-8F3A29',
+        id: 'D-203641',
+        cliente_nombre: 'juan',
+        cliente_telefono: '8095131416',
+        direccion_entrega: 'calle ñ',
+        monto_total: 458.00,
+        metodo_pago: 'Efectivo (Monto Exacto RD$ 458.00)',
+        estado: 'en_camino',
+        status: 'en_camino',
+        delivery_token: 'DEL-96B17L',
         created_at: new Date().toISOString(),
-        detalles: [{ cantidad: 2, nombre: 'Rica Leche Listamilk Lt', precio_unitario: 76 }]
+        detalles: [
+          { cantidad: 1, nombre: 'Bravo Leche Uht Entera 1Lt', precio_unitario: 59 },
+          { cantidad: 1, nombre: 'Refresco Coca-Cola 2 Litros', precio_unitario: 95 },
+          { cantidad: 1, nombre: 'Huevos Frescos Cartón 30 Unid', precio_unitario: 195 },
+          { cantidad: 1, nombre: 'Bravo Dulce De Leche 400 Gr', precio_unitario: 109 }
+        ]
       }
     ];
   });

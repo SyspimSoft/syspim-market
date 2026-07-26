@@ -58,31 +58,24 @@
 
     <script type="text/babel">
       const { useState, useEffect, useMemo } = React;
-
       const INITIAL_DELIVERIES = [
         {
-          id: 'PED-9081',
-          cliente_nombre: 'Carlos Mendoza',
-          cliente_telefono: '8095550199',
-          direccion_entrega: 'Calle Pepillo Salcedo #14, Ens. La Fe',
-          monto_total: 545.00,
-          metodo_pago: 'Efectivo (Paga con $1,000 - Devuelta: $455.00)',
-          estado: 'en_camino',
-          delivery_token: 'DEL-8F3A29',
-          created_at: new Date().toISOString(),
-          detalles: [{ cantidad: 2, nombre: 'Rica Leche Listamilk Lt', precio_unitario: 76 }]
-        },
-        {
-          id: 'PED-9080',
-          cliente_nombre: 'María Rodríguez',
+          id: 'D-203641',
+          cliente_nombre: 'juan',
           cliente_telefono: '8095131416',
-          direccion_entrega: 'Av. 27 de Febrero #45, Apt. 3B',
-          monto_total: 376.00,
-          metodo_pago: 'Efectivo',
-          estado: 'entregado',
-          delivery_token: 'DEL-4B1C90',
-          created_at: new Date(Date.now() - 3600000).toISOString(),
-          detalles: [{ cantidad: 1, nombre: 'Bravo Dulce De Leche 400 Gr', precio_unitario: 109 }]
+          direccion_entrega: 'calle ñ',
+          monto_total: 458.00,
+          metodo_pago: 'Efectivo (Monto Exacto RD$ 458.00)',
+          estado: 'en_camino',
+          status: 'en_camino',
+          delivery_token: 'DEL-96B17L',
+          created_at: new Date().toISOString(),
+          detalles: [
+            { cantidad: 1, nombre: 'Bravo Leche Uht Entera 1Lt', precio_unitario: 59 },
+            { cantidad: 1, nombre: 'Refresco Coca-Cola 2 Litros', precio_unitario: 95 },
+            { cantidad: 1, nombre: 'Huevos Frescos Cartón 30 Unid', precio_unitario: 195 },
+            { cantidad: 1, nombre: 'Bravo Dulce De Leche 400 Gr', precio_unitario: 109 }
+          ]
         }
       ];
 
@@ -95,18 +88,19 @@
         const [selectedFilter, setSelectedFilter] = useState('todos'); // 'todos' | 'en_camino' | 'entregado'
         const [toastMsg, setToastMsg] = useState(null);
 
-        // Lista global de viajes asignados al delivery
+        // Lista global de viajes asignados al delivery (Sincronizado con syspim_pos_pedidos)
         const [trips, setTrips] = useState(() => {
           try {
-            const saved = localStorage.getItem('syspim_delivery_trips');
+            const saved = localStorage.getItem('syspim_pos_pedidos');
             if (saved) return JSON.parse(saved);
           } catch (e) {}
           return INITIAL_DELIVERIES;
         });
 
-        // Guardar viajes en localStorage
+        // Sincronizar viajes con syspim_pos_pedidos y syspim_delivery_trips
         useEffect(() => {
           try {
+            localStorage.setItem('syspim_pos_pedidos', JSON.stringify(trips));
             localStorage.setItem('syspim_delivery_trips', JSON.stringify(trips));
           } catch(e) {}
         }, [trips]);
@@ -116,7 +110,7 @@
           setTimeout(() => setToastMsg(null), 3000);
         };
 
-        // Escuchar nuevos pedidos en tiempo real por BroadcastChannel
+        // Escuchar nuevos pedidos y cambios en tiempo real por BroadcastChannel, Storage y Polling
         useEffect(() => {
           let broadcast;
           try {
@@ -130,28 +124,54 @@
                   }
                   return [{ ...newO, estado: newO.estado || 'en_camino' }, ...prev];
                 });
-                showToast(`🛵 ¡Nuevo viaje asignado! Pedido #${newO.id.slice(-6)}`);
+                showToast(`🛵 ¡Pedido #${newO.id.slice(-6)} actualizado!`);
               }
             };
           } catch (e) {}
-          return () => { try { broadcast?.close(); } catch(e){} };
-        }, []);
+
+          const handleStorage = (e) => {
+            if (e.key === 'syspim_pos_pedidos' && e.newValue) {
+              try {
+                const parsed = JSON.parse(e.newValue);
+                if (Array.isArray(parsed)) setTrips(parsed);
+              } catch(err){}
+            }
+          };
+          window.addEventListener('storage', handleStorage);
+
+          const interval = setInterval(() => {
+            try {
+              const saved = localStorage.getItem('syspim_pos_pedidos');
+              if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && JSON.stringify(parsed) !== JSON.stringify(trips)) {
+                  setTrips(parsed);
+                }
+              }
+            } catch(e){}
+          }, 1000);
+
+          return () => { 
+            try { broadcast?.close(); } catch(e){} 
+            window.removeEventListener('storage', handleStorage);
+            clearInterval(interval);
+          };
+        }, [trips]);
 
         // Búsqueda manual de token
-        const handleSearchToken = (e) => {
-          e?.preventDefault();
-          const t = tokenInput.trim().toUpperCase();
-          if (!t) return;
-
-          const found = trips.find(p => p.delivery_token === t || p.id === t || p.id.endsWith(t));
+        const handleTokenSearch = (e) => {
+          e.preventDefault();
+          if (!tokenInput.trim()) return;
+          const t = tokenInput.trim();
+          const found = trips.find(tr => (tr.delivery_token || '').toLowerCase() === t.toLowerCase() || tr.id.toLowerCase().includes(t.toLowerCase()));
+          
           if (found) {
-            setSelectedFilter('todos');
             setActiveView('list');
             showToast(`✅ Viaje #${found.id} encontrado`);
           } else {
             // Intentar crear un viaje dinámico con ese token
             const newTrip = {
-              id: t.startsWith('PED-') ? t : 'PED-' + t,
+              id: t.startsWith('PED-') || t.startsWith('D-') ? t : 'D-' + t,
               cliente_nombre: 'Cliente de Pedido',
               cliente_telefono: '809-555-0100',
               direccion_entrega: 'Dirección del Pedido (Consultar en caja)',
@@ -170,18 +190,33 @@
 
         // Cambiar estado de un viaje
         const updateTripStatus = (tripId, newStatus) => {
-          setTrips(prev => prev.map(t => {
-            if (t.id === tripId) {
-              const updated = { ...t, estado: newStatus, status: newStatus };
-              try {
-                const broadcast = new BroadcastChannel('syspim_orders_channel');
-                broadcast.postMessage({ type: 'STATUS_UPDATE', order: updated });
-                broadcast.close();
-              } catch(e){}
-              return updated;
+          setTrips(prev => {
+            const updatedList = prev.map(t => {
+              if (t.id === tripId) {
+                return { ...t, estado: newStatus, status: newStatus };
+              }
+              return t;
+            });
+            
+            try {
+              localStorage.setItem('syspim_pos_pedidos', JSON.stringify(updatedList));
+              localStorage.setItem('syspim_delivery_trips', JSON.stringify(updatedList));
+              
+              const targetOrder = updatedList.find(t => t.id === tripId);
+              const broadcast = new BroadcastChannel('syspim_orders_channel');
+              broadcast.postMessage({ type: 'STATUS_UPDATE', order: targetOrder });
+              broadcast.close();
+            } catch(e){}
+
+            // Actualizar Supabase Realtime si está activo
+            const sbClient = window.supabaseClient || window.ColmadoSupabase?.client;
+            if (sbClient) {
+              sbClient.from('pedidos').update({ estado: newStatus, status: newStatus }).eq('id', tripId);
             }
-            return t;
-          }));
+
+            return updatedList;
+          });
+
           const labels = { entregado: '✅ ENTREGADO', en_camino: '🛵 EN CAMINO', cancelado: '❌ CANCELADO' };
           showToast(`✨ Viaje marcado como ${labels[newStatus] || newStatus}`);
         };
