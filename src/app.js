@@ -494,6 +494,10 @@ function App() {
   const [newRepartidorTelefono, setNewRepartidorTelefono] = useState('');
   const [showAddRepartidorForm, setShowAddRepartidorForm] = useState(false);
 
+  // Consulta de Historial de Ventas por Cliente
+  const [viewCustomerHistory, setViewCustomerHistory] = useState(null);
+  const [viewOrderDetails, setViewOrderDetails] = useState(null);
+
   // Modales & Toast
   const [checkoutResult, setCheckoutResult] = useState(null);
   const [toast, setToast] = useState(null);
@@ -1508,9 +1512,13 @@ function App() {
                           </div>
                         </div>
 
-                        <span className="text-[10px] font-bold text-[#64748B] bg-white border border-[#E2E8F0] px-2.5 py-1 rounded-full whitespace-nowrap">
-                          {cust.pedidosCount || 0} pedidos
-                        </span>
+                        <button
+                          onClick={() => setViewCustomerHistory(cust)}
+                          className="text-[10px] font-bold text-[#0369A1] bg-[#E0F2FE] hover:bg-[#BAE6FD] border border-[#BAE6FD] px-2.5 py-1 rounded-full whitespace-nowrap transition-all flex items-center gap-1 shadow-sm"
+                          title="Ver todas las ventas de este cliente"
+                        >
+                          <span>📄 {cust.pedidosCount || 0} pedidos ↗</span>
+                        </button>
                       </div>
 
                       <div className="bg-white border border-[#E2E8F0] p-3 rounded-xl space-y-1 text-xs">
@@ -1525,6 +1533,12 @@ function App() {
                       </div>
 
                       <div className="flex items-center gap-2 pt-1">
+                        <button
+                          onClick={() => setViewCustomerHistory(cust)}
+                          className="px-3 py-2 bg-[#F1F5F9] hover:bg-[#E2E8F0] border border-[#CBD5E1] text-[#0F172A] text-xs font-bold rounded-full transition-all flex items-center justify-center gap-1"
+                        >
+                          <span>📄 Ventas</span>
+                        </button>
                         <button
                           onClick={() => {
                             const slug = activeTenant?.slug || 'colmado-don-pedro';
@@ -1544,7 +1558,7 @@ function App() {
                           }}
                           className="flex-1 px-3 py-2 bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-bold rounded-full shadow-sm flex items-center justify-center gap-1.5 transition-all"
                         >
-                          <span>🛒 Vender en POS</span>
+                          <span>🛒 Vender POS</span>
                         </button>
                       </div>
                     </div>
@@ -1832,6 +1846,184 @@ function App() {
                 className="px-5 py-2 text-xs font-bold bg-[#15803D] hover:bg-[#166534] text-white rounded-full shadow-md shadow-[#15803D]/20 flex items-center gap-1.5"
               >
                 <span>📲 Enviar a Delivery por WhatsApp</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: HISTORIAL DE VENTAS Y COMPRAS DEL CLIENTE */}
+      {viewCustomerHistory && (
+        <div className="fixed inset-0 z-50 bg-[#0F172A]/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white max-w-xl w-full p-6 rounded-[24px] shadow-2xl border border-[#E2E8F0] space-y-4 animate-fade-in-up max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#E0F2FE] text-[#0284C7] flex items-center justify-center font-extrabold text-base shadow-sm">
+                  {viewCustomerHistory.nombre.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-[#0F172A] flex items-center gap-2">
+                    <span>{viewCustomerHistory.nombre}</span>
+                    {viewCustomerHistory.tipo === 'credito' && (
+                      <span className="bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A] text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
+                        📒 Fiado / Crédito
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-[#64748B]">📞 {viewCustomerHistory.telefono || 'Sin teléfono'} • 📍 {viewCustomerHistory.direccion || 'Sin dirección'}</p>
+                </div>
+              </div>
+              <button onClick={() => setViewCustomerHistory(null)} className="w-8 h-8 rounded-full bg-[#F1F5F9] text-gray-500 font-bold">✕</button>
+            </div>
+
+            {/* TARJETA DE RESUMEN ACUMULADO */}
+            <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-3.5 rounded-2xl flex items-center justify-between text-xs">
+              <div>
+                <span className="text-[#64748B] text-[11px] block">Total Pedidos Registrados:</span>
+                <span className="font-extrabold text-sm text-[#0F172A]">{viewCustomerHistory.pedidosCount || 0} compras</span>
+              </div>
+              <div className="text-right">
+                <span className="text-[#64748B] text-[11px] block">Total Acumulado Comprado:</span>
+                <span className="font-extrabold text-base text-[#15803D]">RD$ {(viewCustomerHistory.totalComprado || 0).toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* LISTADO DE VENTAS / PEDIDOS DEL CLIENTE */}
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+              {(() => {
+                const customerPhone = (viewCustomerHistory.telefono || '').replace(/[^0-9]/g, '');
+                const clientOrders = pedidos.filter(p => {
+                  const pPhone = (p.cliente_telefono || '').replace(/[^0-9]/g, '');
+                  const pName = (p.cliente_nombre || p.customer_info?.nombre || '').toLowerCase();
+                  return (customerPhone && pPhone === customerPhone) || pName === viewCustomerHistory.nombre.toLowerCase();
+                });
+
+                if (clientOrders.length === 0) {
+                  return (
+                    <div className="p-8 border border-dashed border-[#E2E8F0] rounded-2xl text-center space-y-2">
+                      <span className="text-2xl block">📄</span>
+                      <p className="font-bold text-xs text-[#0F172A]">Sin detalle de pedidos registrados en tiempo real</p>
+                      <p className="text-[11px] text-[#64748B]">Las ventas registradas desde la caja POS o PWA para este cliente aparecerán aquí.</p>
+                    </div>
+                  );
+                }
+
+                return clientOrders.map(order => {
+                  const isDone = (order.estado || order.status) === 'entregado' || (order.estado || order.status) === 'completado';
+                  
+                  return (
+                    <div key={order.id} className="bg-white border border-[#E2E8F0] p-4 rounded-2xl space-y-2 shadow-sm hover:border-[#BAE6FD] transition-all">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-sm text-[#0F172A]">#{order.id.slice(-8)}</span>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase border ${
+                            isDone ? 'bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]' : 'bg-[#FEF3C7] text-[#B45309] border-[#FDE68A]'
+                          }`}>
+                            {isDone ? '✅ ENTREGADO' : '🟡 EN PROCESO'}
+                          </span>
+                        </div>
+                        <span className="font-mono text-xs font-bold text-[#15803D]">
+                          RD$ {(order.monto_total || order.total || 0).toFixed(2)}
+                        </span>
+                      </div>
+
+                      <div className="text-[11px] text-[#64748B] flex items-center justify-between pt-1 border-t border-[#F1F5F9]">
+                        <span>💳 {order.metodo_pago}</span>
+                        <span>🔑 {order.delivery_token || 'POS'}</span>
+                      </div>
+
+                      <button
+                        onClick={() => setViewOrderDetails(order)}
+                        className="w-full py-2 bg-[#E0F2FE] hover:bg-[#BAE6FD] text-[#0369A1] border border-[#BAE6FD] font-bold text-xs rounded-xl flex items-center justify-center gap-1 transition-all mt-1"
+                      >
+                        🔍 Abrir y Consultar esta Venta
+                      </button>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CONSULTA DETALLADA DE VENTA TICKET */}
+      {viewOrderDetails && (
+        <div className="fixed inset-0 z-50 bg-[#0F172A]/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white max-w-md w-full p-6 rounded-[24px] shadow-2xl border border-[#E2E8F0] space-y-4 animate-fade-in-up">
+            <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
+              <div>
+                <h3 className="font-extrabold text-base text-[#0F172A] flex items-center gap-2">
+                  <span>🧾 Consulta de Venta</span>
+                </h3>
+                <span className="text-[11px] font-mono text-[#64748B]">Ticket #{viewOrderDetails.id}</span>
+              </div>
+              <button onClick={() => setViewOrderDetails(null)} className="w-8 h-8 rounded-full bg-[#F1F5F9] text-gray-500 font-bold">✕</button>
+            </div>
+
+            {/* DETALLES DE LA VENTA */}
+            <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-4 rounded-2xl space-y-2 text-xs">
+              <div className="flex justify-between pb-1.5 border-b border-[#E2E8F0]">
+                <span className="text-[#64748B]">Cliente:</span>
+                <span className="font-extrabold text-[#0F172A]">{viewOrderDetails.cliente_nombre || 'Cliente General'}</span>
+              </div>
+              <div className="flex justify-between pb-1.5 border-b border-[#E2E8F0]">
+                <span className="text-[#64748B]">Teléfono:</span>
+                <span className="font-mono text-[#0F172A]">{viewOrderDetails.cliente_telefono || 'Sin teléfono'}</span>
+              </div>
+              <div className="flex justify-between pb-1.5 border-b border-[#E2E8F0]">
+                <span className="text-[#64748B]">Dirección:</span>
+                <span className="font-semibold text-[#0F172A] text-right">{viewOrderDetails.direccion_entrega || 'Local'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#64748B]">Forma de Pago:</span>
+                <span className="font-bold text-[#0369A1]">{viewOrderDetails.metodo_pago}</span>
+              </div>
+            </div>
+
+            {/* DESGLOSE DE PRODUCTOS SOLICITADOS */}
+            <div className="space-y-1.5 text-xs">
+              <span className="text-[10px] font-bold uppercase text-[#64748B] block">Productos Comprados:</span>
+              <div className="bg-white border border-[#E2E8F0] p-3 rounded-2xl space-y-1.5 max-h-40 overflow-y-auto">
+                {(viewOrderDetails.detalles || []).length > 0 ? (
+                  viewOrderDetails.detalles.map((d, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-[#0F172A]">
+                      <span className="font-semibold">• {d.cantidad}x {d.nombre}</span>
+                      <span className="font-mono text-[#64748B]">RD$ {((d.precio_unitario || 0) * d.cantidad).toFixed(2)}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-[#64748B] text-center">Venta rápida registrada en POS</p>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-[#DCFCE7] border border-[#86EFAC] p-3 rounded-2xl flex items-center justify-between text-sm font-extrabold text-[#15803D]">
+              <span>TOTAL DE LA VENTA:</span>
+              <span>RD$ {(viewOrderDetails.monto_total || viewOrderDetails.total || 0).toFixed(2)}</span>
+            </div>
+
+            {/* BOTONES DE ACCIÓN */}
+            <div className="pt-2 flex justify-end gap-2">
+              <button 
+                type="button" 
+                onClick={() => setViewOrderDetails(null)} 
+                className="px-4 py-2 text-xs font-bold text-[#64748B] hover:bg-[#F1F5F9] rounded-full"
+              >
+                Cerrar
+              </button>
+              <button 
+                type="button" 
+                onClick={() => {
+                  if (window.AdminModule && window.AdminModule.acceptAndPrintOrder) {
+                    window.AdminModule.acceptAndPrintOrder(viewOrderDetails.id, viewOrderDetails);
+                  } else {
+                    window.print();
+                  }
+                }} 
+                className="px-5 py-2 text-xs font-bold bg-[#0284C7] hover:bg-[#0369A1] text-white rounded-full shadow-md shadow-[#0284C7]/20 flex items-center gap-1.5"
+              >
+                <span>🖨️ Re-Imprimir Ticket</span>
               </button>
             </div>
           </div>
