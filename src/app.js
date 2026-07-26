@@ -470,6 +470,30 @@ function App() {
   const [sharePhone, setSharePhone] = useState('');
   const [orderSubFilter, setOrderSubFilter] = useState('active'); // 'active' | 'completed' | 'all'
 
+  // Repartidores / Deliveries del colmado
+  const [repartidoresList, setRepartidoresList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('syspim_repartidores_list');
+      if (saved) return JSON.parse(saved);
+    } catch(e) {}
+    return [
+      { id: 'rep-1', nombre: 'Delivery Principal', telefono: '8094965148' },
+      { id: 'rep-2', nombre: 'Delivery Auxiliar', telefono: '8095550199' }
+    ];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('syspim_repartidores_list', JSON.stringify(repartidoresList));
+    } catch(e) {}
+  }, [repartidoresList]);
+
+  const [selectedOrderForDelivery, setSelectedOrderForDelivery] = useState(null);
+  const [selectedRepartidorPhone, setSelectedRepartidorPhone] = useState('8094965148');
+  const [newRepartidorNombre, setNewRepartidorNombre] = useState('');
+  const [newRepartidorTelefono, setNewRepartidorTelefono] = useState('');
+  const [showAddRepartidorForm, setShowAddRepartidorForm] = useState(false);
+
   // Modales & Toast
   const [checkoutResult, setCheckoutResult] = useState(null);
   const [toast, setToast] = useState(null);
@@ -1387,28 +1411,7 @@ function App() {
 
                               {/* BOTÓN 2: ENVIAR PEDIDO AL WHATSAPP DEL REPARTIDOR / DELIVERY */}
                               <button
-                                onClick={() => {
-                                  const repartidorPhone = prompt('Ingresa el WhatsApp del Delivery / Repartidor:', '8095550199');
-                                  if (!repartidorPhone) return;
-
-                                  // Construir enlace directo de ejecución para el repartidor
-                                  const baseUrl = window.location.origin + window.location.pathname.replace(/\/index\.html$/, '/');
-                                  const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
-                                  const deliveryLink = `${cleanBaseUrl}delivery.html?token=${ped.delivery_token || ped.id}`;
-
-                                  const colmado = activeTenant?.nombre || 'COLMADO DON PEDRO';
-                                  const rawMsg = `🛵 DESPACHO DE DELIVERY - ${colmado}\n\n` +
-                                                 `📦 Pedido #${ped.id.slice(-8)}\n` +
-                                                 `👤 Cliente: ${ped.cliente_nombre || 'Cliente'}\n` +
-                                                 `📞 Teléfono: ${ped.cliente_telefono || 'N/A'}\n` +
-                                                 `📍 Dirección: ${ped.direccion_entrega}\n\n` +
-                                                 `💳 Forma de Pago: ${ped.metodo_pago}\n` +
-                                                 `💵 TOTAL A COBRAR: RD$ ${(ped.monto_total || 0).toFixed(2)}\n\n` +
-                                                 `🔑 Abrir en Panel de Delivery:\n${deliveryLink}`;
-
-                                  const encodedMsg = encodeURIComponent(rawMsg);
-                                  window.open(`https://wa.me/${repartidorPhone.replace(/[^0-9]/g, '')}?text=${encodedMsg}`, '_blank');
-                                }}
+                                onClick={() => setSelectedOrderForDelivery(ped)}
                                 className="flex-1 sm:flex-initial px-3.5 py-2 bg-[#15803D] hover:bg-[#166534] text-white font-bold rounded-full text-xs shadow-md shadow-[#15803D]/20 flex items-center justify-center gap-1 transition-all"
                               >
                                 📲 Enviar a Delivery
@@ -1695,6 +1698,141 @@ function App() {
                   <span>📲 Abrir WhatsApp</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: SELECCIONAR O AGREGAR REPARTIDOR / DELIVERY */}
+      {selectedOrderForDelivery && (
+        <div className="fixed inset-0 z-50 bg-[#0F172A]/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white max-w-md w-full p-6 rounded-[24px] shadow-2xl border border-[#E2E8F0] space-y-4 animate-fade-in-up">
+            <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
+              <h3 className="font-extrabold text-base text-[#0F172A] flex items-center gap-2">
+                <span>🛵 Seleccionar Repartidor / Delivery</span>
+              </h3>
+              <button onClick={() => setSelectedOrderForDelivery(null)} className="w-8 h-8 rounded-full bg-[#F1F5F9] text-gray-500 font-bold">✕</button>
+            </div>
+
+            <p className="text-xs text-[#64748B]">Selecciona a qué repartidor deseas enviar el pedido <strong>#{selectedOrderForDelivery.id.slice(-8)}</strong> por WhatsApp:</p>
+
+            {/* LISTA DE REPARTIDORES GUARDADOS */}
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              {repartidoresList.map(rep => (
+                <label 
+                  key={rep.id} 
+                  className={`flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                    selectedRepartidorPhone === rep.telefono
+                      ? 'bg-[#E0F2FE] border-[#0284C7] shadow-sm'
+                      : 'bg-[#F8FAFC] border-[#E2E8F0] hover:border-[#BAE6FD]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      name="repartidorSelect"
+                      value={rep.telefono}
+                      checked={selectedRepartidorPhone === rep.telefono}
+                      onChange={() => setSelectedRepartidorPhone(rep.telefono)}
+                      className="accent-[#0284C7]"
+                    />
+                    <div>
+                      <span className="font-extrabold text-xs text-[#0F172A] block">{rep.nombre}</span>
+                      <span className="text-[11px] font-mono text-[#64748B]">📞 {rep.telefono}</span>
+                    </div>
+                  </div>
+                  {rep.telefono === '8094965148' && (
+                    <span className="bg-[#DCFCE7] text-[#15803D] border border-[#86EFAC] text-[9px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">
+                      ⭐ Principal
+                    </span>
+                  )}
+                </label>
+              ))}
+            </div>
+
+            {/* OPCIÓN DE AGREGAR OTRO REPARTIDOR */}
+            {!showAddRepartidorForm ? (
+              <button
+                onClick={() => setShowAddRepartidorForm(true)}
+                className="w-full py-2 text-center text-xs font-bold text-[#0284C7] hover:underline"
+              >
+                + Agregar otro número de delivery
+              </button>
+            ) : (
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (!newRepartidorNombre || !newRepartidorTelefono) return;
+                const cleanT = newRepartidorTelefono.replace(/[^0-9]/g, '');
+                const newRep = {
+                  id: 'rep-' + Date.now(),
+                  nombre: newRepartidorNombre.trim(),
+                  telefono: cleanT
+                };
+                setRepartidoresList(prev => [...prev, newRep]);
+                setSelectedRepartidorPhone(cleanT);
+                setNewRepartidorNombre('');
+                setNewRepartidorTelefono('');
+                setShowAddRepartidorForm(false);
+                setToast(`✅ Delivery ${newRep.nombre} guardado`);
+              }} className="bg-[#F8FAFC] border border-[#E2E8F0] p-3.5 rounded-2xl space-y-2.5 text-xs font-bold animate-fade-in-up">
+                <span className="text-[10px] text-[#64748B] uppercase font-bold block">Nuevo Repartidor:</span>
+                <input
+                  type="text"
+                  required
+                  placeholder="Nombre (Ej: Delivery 3 - Pedro)"
+                  value={newRepartidorNombre}
+                  onChange={(e) => setNewRepartidorNombre(e.target.value)}
+                  className="w-full bg-white border border-[#E2E8F0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#0284C7]"
+                />
+                <input
+                  type="text"
+                  required
+                  placeholder="WhatsApp (Ej: 8094965148)"
+                  value={newRepartidorTelefono}
+                  onChange={(e) => setNewRepartidorTelefono(e.target.value)}
+                  className="w-full bg-white border border-[#E2E8F0] rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#0284C7]"
+                />
+                <div className="flex justify-end gap-2 pt-1">
+                  <button type="button" onClick={() => setShowAddRepartidorForm(false)} className="px-3 py-1.5 text-xs text-[#64748B]">Cancelar</button>
+                  <button type="submit" className="px-4 py-1.5 bg-[#0284C7] text-white font-bold rounded-full text-xs shadow-sm">Guardar Delivery</button>
+                </div>
+              </form>
+            )}
+
+            {/* BOTÓN FINAL PARA ENVIAR WHATSAPP */}
+            <div className="pt-2 flex justify-end gap-2">
+              <button type="button" onClick={() => setSelectedOrderForDelivery(null)} className="px-4 py-2 text-xs font-bold text-[#64748B] hover:bg-[#F1F5F9] rounded-full">Cancelar</button>
+              <button 
+                type="button" 
+                onClick={() => {
+                  const ped = selectedOrderForDelivery;
+                  const cleanPhone = selectedRepartidorPhone.replace(/[^0-9]/g, '');
+                  
+                  const baseUrl = window.location.origin + window.location.pathname.replace(/\/index\.html$/, '/');
+                  const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+                  const deliveryLink = `${cleanBaseUrl}delivery.html?token=${ped.delivery_token || ped.id}`;
+
+                  const colmado = activeTenant?.nombre || 'COLMADO DON PEDRO';
+                  const rawMsg = `🛵 DESPACHO DE DELIVERY - ${colmado}\n\n` +
+                                 `📦 Pedido #${ped.id.slice(-8)}\n` +
+                                 `👤 Cliente: ${ped.cliente_nombre || 'Cliente'}\n` +
+                                 `📞 Teléfono: ${ped.cliente_telefono || 'N/A'}\n` +
+                                 `📍 Dirección: ${ped.direccion_entrega}\n\n` +
+                                 `💳 Forma de Pago: ${ped.metodo_pago}\n` +
+                                 `💵 TOTAL A COBRAR: RD$ ${(ped.monto_total || 0).toFixed(2)}\n\n` +
+                                 `🔑 Abrir en Panel de Delivery:\n${deliveryLink}`;
+
+                  window.open(`https://wa.me/1${cleanPhone}?text=${encodeURIComponent(rawMsg)}`, '_blank');
+                  
+                  // Auto-cambiar el estado del pedido a 'en_camino'
+                  setPedidos(prev => prev.map(p => p.id === ped.id ? { ...p, estado: 'en_camino', status: 'en_camino' } : p));
+                  setSelectedOrderForDelivery(null);
+                  setToast(`📲 Despacho enviado a Delivery (${cleanPhone})`);
+                }} 
+                className="px-5 py-2 text-xs font-bold bg-[#15803D] hover:bg-[#166534] text-white rounded-full shadow-md shadow-[#15803D]/20 flex items-center gap-1.5"
+              >
+                <span>📲 Enviar a Delivery por WhatsApp</span>
+              </button>
             </div>
           </div>
         </div>
