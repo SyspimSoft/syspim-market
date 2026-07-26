@@ -230,13 +230,20 @@
               }
             } catch(e){}
 
-            // Guardar en Supabase Realtime si está conectado
-            const sbClient = window.supabaseClient || window.ColmadoSupabase?.client;
+            // Guardar en Supabase Realtime si está conectado (con fallback a ambas tablas)
+            const sbClient = (window.ColmadoSupabase && window.ColmadoSupabase.client) || window.supabaseClient;
             if (sbClient) {
               try {
-                await sbClient.from('pedidos').insert([orderPayload]);
+                const res1 = await sbClient.from('pedidos').insert([orderPayload]);
+                if (res1.error) console.warn('Supabase pedidos insert:', res1.error);
               } catch(e) {
-                console.log('Supabase insert error:', e);
+                console.log('Supabase insert error pedidos:', e);
+              }
+              try {
+                const res2 = await sbClient.from('orders').insert([orderPayload]);
+                if (res2.error) console.warn('Supabase orders insert:', res2.error);
+              } catch(e) {
+                console.log('Supabase insert error orders:', e);
               }
             }
 

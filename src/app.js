@@ -623,18 +623,30 @@ function App() {
       } catch(e){}
     }, 1500);
 
-    // 4. Escuchador de Supabase Realtime y Carga Inicial si está configurado
+    // 4. Escuchador de Supabase Realtime, Polling Recurrente cada 3s y Carga Inicial
     let supabaseSubscription;
-    const sbClient = window.supabaseClient || window.ColmadoSupabase?.client;
+    const fetchSupabaseOrders = () => {
+      const sbClient = (window.ColmadoSupabase && window.ColmadoSupabase.client) || window.supabaseClient;
+      if (sbClient) {
+        try {
+          sbClient.from('pedidos').select('*').order('created_at', { ascending: false }).limit(20)
+            .then(({ data }) => {
+              if (data && Array.isArray(data)) data.forEach(ord => handleNewOrder(ord));
+            }).catch(() => {});
+          sbClient.from('orders').select('*').order('created_at', { ascending: false }).limit(20)
+            .then(({ data }) => {
+              if (data && Array.isArray(data)) data.forEach(ord => handleNewOrder(ord));
+            }).catch(() => {});
+        } catch(e){}
+      }
+    };
+
+    fetchSupabaseOrders();
+    const supabaseInterval = setInterval(fetchSupabaseOrders, 3000);
+
+    const sbClient = (window.ColmadoSupabase && window.ColmadoSupabase.client) || window.supabaseClient;
     if (sbClient) {
       try {
-        sbClient.from('pedidos').select('*').order('created_at', { ascending: false }).limit(20)
-          .then(({ data }) => {
-            if (data && Array.isArray(data)) {
-              data.forEach(ord => handleNewOrder(ord));
-            }
-          });
-
         supabaseSubscription = sbClient
           .channel('public:pedidos')
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, (payload) => {
@@ -648,6 +660,7 @@ function App() {
       if (broadcast) broadcast.close();
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(queueInterval);
+      clearInterval(supabaseInterval);
       if (supabaseSubscription && sbClient) {
         sbClient.removeChannel(supabaseSubscription);
       }

@@ -6,22 +6,27 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Cambiar esta variable cuando vincules un dominio personalizado (ej: https://syspimmarket.com)
 const PUBLIC_DOMAIN = window.APP_PUBLIC_DOMAIN || (window.location.origin.includes('localhost') ? window.location.origin : window.location.origin);
 
-// Inicializar cliente Supabase globalmente
+// Inicializar cliente Supabase globalmente con reintentos para móviles
 let supabaseClient = null;
-
-if (window.supabase && typeof window.supabase.createClient === 'function') {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    window.supabaseClient = supabaseClient;
-} else {
-    console.warn("Supabase SDK no detectado aún en window.supabase. Se intentará reconectar.");
-}
 
 function getSupabase() {
     if (!supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         window.supabaseClient = supabaseClient;
     }
-    return supabaseClient;
+    return supabaseClient || window.supabaseClient;
+}
+
+if (window.supabase && typeof window.supabase.createClient === 'function') {
+    getSupabase();
+} else {
+    const initInterval = setInterval(() => {
+        if (window.supabase && typeof window.supabase.createClient === 'function') {
+            getSupabase();
+            clearInterval(initInterval);
+        }
+    }, 200);
+    setTimeout(() => clearInterval(initInterval), 10000);
 }
 
 window.ColmadoSupabase = {
