@@ -197,8 +197,12 @@
                   : `Efectivo (Monto Exacto RD$ ${cartTotal.toFixed(2)})`)
               : paymentMethod;
 
+            const tenantObj = (window.DEMO_TENANTS || []).find(t => t.slug === tenantSlug) || {};
+            const tenantId = tenantObj.id || '00000000-0000-0000-0000-000000000001';
+
             const orderPayload = {
               id: 'PED-' + Math.floor(100000 + Math.random() * 900000),
+              tenant_id: tenantId,
               tenant_slug: tenantSlug,
               cliente_nombre: customerName,
               cliente_telefono: customerPhone,
@@ -206,6 +210,7 @@
               monto_total: cartTotal,
               metodo_pago: pagoDetalle,
               estado: 'pendiente',
+              status: 'pendiente',
               delivery_token: 'DEL-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
               detalles: cart.map(i => ({ cantidad: i.qty, nombre: i.nombre, precio_unitario: i.precio })),
               created_at: new Date().toISOString()

@@ -101,3 +101,41 @@ VALUES
   ('00000000-0000-0000-0000-000000000003', 'Supermercado El Sol', 'Supermercado El Sol', 'supermercado-el-sol', 'suspended', '8095550199', '8095550199', 'Av. Winston Churchill #88', 'Av. Winston Churchill #88', 'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=200&q=80')
 ON CONFLICT (slug) DO UPDATE 
 SET name = EXCLUDED.name, nombre = EXCLUDED.nombre, status = EXCLUDED.status, contact_phone = EXCLUDED.contact_phone;
+
+-- 9. POLÍTICAS RLS Y REALTIME PARA PEDIDOS DE CLIENTES MÓVILES
+CREATE TABLE IF NOT EXISTS public.pedidos (
+  id TEXT PRIMARY KEY,
+  tenant_id UUID,
+  tenant_slug TEXT,
+  cliente_nombre TEXT,
+  cliente_telefono TEXT,
+  direccion_entrega TEXT,
+  monto_total NUMERIC,
+  metodo_pago TEXT,
+  estado TEXT DEFAULT 'pendiente',
+  status TEXT DEFAULT 'pendiente',
+  delivery_token TEXT,
+  detalles JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+ALTER TABLE public.pedidos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Permitir todo en pedidos" ON public.pedidos;
+CREATE POLICY "Permitir todo en pedidos" ON public.pedidos FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Permitir todo en orders" ON public.orders;
+CREATE POLICY "Permitir todo en orders" ON public.orders FOR ALL USING (true) WITH CHECK (true);
+
+-- Habilitar Supabase Realtime para pedidos y orders
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'pedidos') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.pedidos;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'orders') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.orders;
+  END IF;
+EXCEPTION WHEN OTHERS THEN
+  NULL;
+END $$;
