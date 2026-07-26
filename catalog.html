@@ -222,10 +222,22 @@
 
             // Guardar en localStorage para desencadenar el evento de almacenamiento cruzado
             localStorage.setItem('syspim_last_order', JSON.stringify({ ...orderPayload, timestamp: Date.now() }));
+            try {
+              const queue = JSON.parse(localStorage.getItem('syspim_pending_orders_queue') || '[]');
+              if (!queue.some(q => q.id === orderPayload.id)) {
+                queue.unshift(orderPayload);
+                localStorage.setItem('syspim_pending_orders_queue', JSON.stringify(queue));
+              }
+            } catch(e){}
 
             // Guardar en Supabase Realtime si está conectado
-            if (window.supabaseClient) {
-              await window.supabaseClient.from('pedidos').insert([orderPayload]);
+            const sbClient = window.supabaseClient || window.ColmadoSupabase?.client;
+            if (sbClient) {
+              try {
+                await sbClient.from('pedidos').insert([orderPayload]);
+              } catch(e) {
+                console.log('Supabase insert error:', e);
+              }
             }
 
             // También guardar en memoria local global para simulación inmediata

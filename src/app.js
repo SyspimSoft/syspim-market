@@ -591,31 +591,59 @@ function App() {
 
     // 2. Escuchador de localStorage
     const handleStorageChange = (e) => {
-      if (e.key === 'syspim_last_order' && e.newValue) {
+      if ((e.key === 'syspim_last_order' || e.key === 'syspim_pending_orders_queue') && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
-          handleNewOrder(parsed);
+          if (Array.isArray(parsed)) {
+            parsed.forEach(o => handleNewOrder(o));
+          } else {
+            handleNewOrder(parsed);
+          }
         } catch (err) {}
       }
     };
     window.addEventListener('storage', handleStorageChange);
 
-    // 3. Escuchador de Supabase Realtime si está configurado
+    // 3. Polling automático de seguridad cada 1.5 segundos para no perder ningún pedido
+    const queueInterval = setInterval(() => {
+      try {
+        const queueStr = localStorage.getItem('syspim_pending_orders_queue');
+        if (queueStr) {
+          const queue = JSON.parse(queueStr);
+          if (Array.isArray(queue) && queue.length > 0) {
+            queue.forEach(ord => handleNewOrder(ord));
+          }
+        }
+      } catch(e){}
+    }, 1500);
+
+    // 4. Escuchador de Supabase Realtime y Carga Inicial si está configurado
     let supabaseSubscription;
-    if (window.supabaseClient) {
-      supabaseSubscription = window.supabaseClient
-        .channel('public:pedidos')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, (payload) => {
-          if (payload.new) handleNewOrder(payload.new);
-        })
-        .subscribe();
+    const sbClient = window.supabaseClient || window.ColmadoSupabase?.client;
+    if (sbClient) {
+      try {
+        sbClient.from('pedidos').select('*').order('created_at', { ascending: false }).limit(20)
+          .then(({ data }) => {
+            if (data && Array.isArray(data)) {
+              data.forEach(ord => handleNewOrder(ord));
+            }
+          });
+
+        supabaseSubscription = sbClient
+          .channel('public:pedidos')
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'pedidos' }, (payload) => {
+            if (payload.new) handleNewOrder(payload.new);
+          })
+          .subscribe();
+      } catch(e){}
     }
 
     return () => {
       if (broadcast) broadcast.close();
       window.removeEventListener('storage', handleStorageChange);
-      if (supabaseSubscription && window.supabaseClient) {
-        window.supabaseClient.removeChannel(supabaseSubscription);
+      clearInterval(queueInterval);
+      if (supabaseSubscription && sbClient) {
+        sbClient.removeChannel(supabaseSubscription);
       }
     };
   }, []);

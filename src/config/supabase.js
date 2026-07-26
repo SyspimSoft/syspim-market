@@ -11,6 +11,7 @@ let supabaseClient = null;
 
 if (window.supabase && typeof window.supabase.createClient === 'function') {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    window.supabaseClient = supabaseClient;
 } else {
     console.warn("Supabase SDK no detectado aún en window.supabase. Se intentará reconectar.");
 }
@@ -18,6 +19,7 @@ if (window.supabase && typeof window.supabase.createClient === 'function') {
 function getSupabase() {
     if (!supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
         supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        window.supabaseClient = supabaseClient;
     }
     return supabaseClient;
 }
