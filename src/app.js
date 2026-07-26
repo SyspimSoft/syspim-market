@@ -1316,14 +1316,14 @@ function App() {
                           const deliveryLink = `${cleanBaseUrl}delivery.html?token=${ped.delivery_token || ped.id}`;
 
                           const colmado = activeTenant?.nombre || 'COLMADO DON PEDRO';
-                          const rawMsg = `DESPACHO DE DELIVERY - ${colmado}\n\n` +
-                                         `ENLACE DE EJECUCIÓN DEL PEDIDO:\n${deliveryLink}\n\n` +
-                                         `Cliente: ${ped.cliente_nombre || 'Cliente'}\n` +
-                                         `Teléfono: ${ped.cliente_telefono || 'N/A'}\n` +
-                                         `Dirección: ${ped.direccion_entrega}\n` +
-                                         `Pago: ${ped.metodo_pago}\n` +
-                                         `TOTAL A COBRAR: RD$ ${(ped.monto_total || 0).toFixed(2)}\n` +
-                                         `Token: ${ped.delivery_token || 'DEL-000000'}`;
+                          const rawMsg = `🛵 DESPACHO DE DELIVERY - ${colmado}\n\n` +
+                                         `📦 Pedido #${ped.id.slice(-8)}\n` +
+                                         `👤 Cliente: ${ped.cliente_nombre || 'Cliente'}\n` +
+                                         `📞 Teléfono: ${ped.cliente_telefono || 'N/A'}\n` +
+                                         `📍 Dirección: ${ped.direccion_entrega}\n\n` +
+                                         `💳 Forma de Pago: ${ped.metodo_pago}\n` +
+                                         `💵 TOTAL A COBRAR: RD$ ${(ped.monto_total || 0).toFixed(2)}\n\n` +
+                                         `🔑 Abrir en Panel de Delivery:\n${deliveryLink}`;
 
                           const encodedMsg = encodeURIComponent(rawMsg);
                           window.open(`https://wa.me/${repartidorPhone.replace(/[^0-9]/g, '')}?text=${encodedMsg}`, '_blank');

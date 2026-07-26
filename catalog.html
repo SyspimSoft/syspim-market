@@ -153,7 +153,7 @@
         const cartTotal = useMemo(() => cart.reduce((sum, item) => sum + (item.precio * item.qty), 0), [cart]);
 
         const cashVal = parseFloat(cashPagarCon) || 0;
-        const devueltaMonto = cashVal > cartTotal ? cashVal - cartTotal : 0;
+        const devueltaMonto = (cartTotal > 0 && cashVal > cartTotal) ? cashVal - cartTotal : 0;
 
         const filteredProducts = useMemo(() => {
           return products.filter(p => {
@@ -192,7 +192,9 @@
 
           try {
             const pagoDetalle = paymentMethod === 'Efectivo' 
-              ? `Efectivo (Paga con RD$ ${cashVal.toFixed(2)} - Devuelta: RD$ ${devueltaMonto.toFixed(2)})`
+              ? (devueltaMonto > 0 
+                  ? `Efectivo (Paga con RD$ ${cashVal.toFixed(2)} - Devuelta: RD$ ${devueltaMonto.toFixed(2)})`
+                  : `Efectivo (Monto Exacto RD$ ${cartTotal.toFixed(2)})`)
               : paymentMethod;
 
             const orderPayload = {
@@ -624,12 +626,14 @@
 
                           {/* INFORMACIÓN CALCULADA DE DEVUELTA */}
                           <div className="text-[11px] font-bold text-[#0369A1] pt-1">
-                            {devueltaMonto > 0 ? (
+                            {cartTotal > 0 && devueltaMonto > 0 ? (
                               <span>💡 El delivery debe llevar <strong className="text-[#15803D]">RD$ {devueltaMonto.toFixed(2)}</strong> de devuelta.</span>
-                            ) : cashVal === cartTotal ? (
-                              <span className="text-[#15803D]">✨ Llevarás el monto exacto (sin devuelta).</span>
+                            ) : cartTotal > 0 && (cashVal === cartTotal || cashVal === 0) ? (
+                              <span className="text-[#15803D]">✨ Pagarás con el monto exacto (sin devuelta).</span>
+                            ) : cartTotal > 0 && cashVal > 0 && cashVal < cartTotal ? (
+                              <span className="text-[#B91C1C]">⚠️ El billete ingresado (RD$ {cashVal}) es menor que el total (RD$ {cartTotal.toFixed(2)}).</span>
                             ) : (
-                              <span className="text-[#B91C1C]">⚠️ El monto ingresado es menor al total del pedido.</span>
+                              <span className="text-[#64748B]">Agrega productos a tu carrito para calcular la devuelta.</span>
                             )}
                           </div>
                         </div>
