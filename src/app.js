@@ -1407,17 +1407,25 @@ function App() {
                           </div>
 
                           {/* DESGLOSE DE PRODUCTOS SOLICITADOS */}
-                          {ped.detalles && ped.detalles.length > 0 && (
-                            <div className="bg-white border border-[#E2E8F0] p-2.5 rounded-xl space-y-1">
-                              <span className="text-[10px] font-bold uppercase text-[#64748B] block">Productos Solicitados:</span>
-                              {ped.detalles.map((d, idx) => (
-                                <div key={idx} className="flex justify-between text-[11px] text-[#0F172A]">
-                                  <span>• {d.cantidad}x {d.nombre}</span>
-                                  <span className="font-mono text-[#64748B]">RD$ {(d.precio_unitario * d.cantidad).toFixed(2)}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                          {(() => {
+                            let items = [];
+                            if (Array.isArray(ped.detalles)) items = ped.detalles;
+                            else if (typeof ped.detalles === 'string') {
+                              try { items = JSON.parse(ped.detalles); } catch(e){}
+                            }
+                            if (items.length === 0) return null;
+                            return (
+                              <div className="bg-white border border-[#E2E8F0] p-2.5 rounded-xl space-y-1">
+                                <span className="text-[10px] font-bold uppercase text-[#64748B] block">Productos Solicitados:</span>
+                                {items.map((d, idx) => (
+                                  <div key={idx} className="flex justify-between text-[11px] text-[#0F172A]">
+                                    <span>• {d.cantidad || 1}x {d.nombre}</span>
+                                    <span className="font-mono text-[#64748B]">RD$ {((d.precio_unitario || d.precio || 0) * (d.cantidad || 1)).toFixed(2)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })()}
 
                           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pt-3 border-t border-[#E2E8F0]">
                             <span className="font-extrabold text-[#15803D] text-base font-jakarta">
@@ -2069,16 +2077,20 @@ function App() {
             <div className="space-y-1.5 text-xs">
               <span className="text-[10px] font-bold uppercase text-[#64748B] block">Productos Comprados:</span>
               <div className="bg-white border border-[#E2E8F0] p-3 rounded-2xl space-y-1.5 max-h-40 overflow-y-auto">
-                {(viewOrderDetails.detalles || []).length > 0 ? (
-                  viewOrderDetails.detalles.map((d, idx) => (
+                {(() => {
+                  let items = [];
+                  if (Array.isArray(viewOrderDetails.detalles)) items = viewOrderDetails.detalles;
+                  else if (typeof viewOrderDetails.detalles === 'string') {
+                    try { items = JSON.parse(viewOrderDetails.detalles); } catch(e){}
+                  }
+                  if (items.length === 0) return <p className="text-[#64748B] text-center">Venta rápida registrada en POS</p>;
+                  return items.map((d, idx) => (
                     <div key={idx} className="flex justify-between items-center text-[#0F172A]">
-                      <span className="font-semibold">• {d.cantidad}x {d.nombre}</span>
-                      <span className="font-mono text-[#64748B]">RD$ {((d.precio_unitario || 0) * d.cantidad).toFixed(2)}</span>
+                      <span className="font-semibold">• {d.cantidad || 1}x {d.nombre}</span>
+                      <span className="font-mono text-[#64748B]">RD$ {((d.precio_unitario || d.precio || 0) * (d.cantidad || 1)).toFixed(2)}</span>
                     </div>
-                  ))
-                ) : (
-                  <p className="text-[#64748B] text-center">Venta rápida registrada en POS</p>
-                )}
+                  ));
+                })()}
               </div>
             </div>
 
