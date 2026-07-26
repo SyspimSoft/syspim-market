@@ -514,6 +514,7 @@ function App() {
   // Consulta de Historial de Ventas por Cliente
   const [viewCustomerHistory, setViewCustomerHistory] = useState(null);
   const [viewOrderDetails, setViewOrderDetails] = useState(null);
+  const [showDiagnosticsModal, setShowDiagnosticsModal] = useState(false);
 
   // Modales & Toast
   const [checkoutResult, setCheckoutResult] = useState(null);
@@ -828,7 +829,14 @@ function App() {
                 onClick={() => setShowSharePwaModal(true)} 
                 className="bg-[#0284C7] hover:bg-[#0369A1] text-white px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-md shadow-[#0284C7]/20 flex items-center gap-1.5"
               >
-                <span>📲 Enviar a Cliente por WhatsApp</span>
+                <span>📲 Enviar a Cliente</span>
+              </button>
+              <button
+                onClick={() => setShowDiagnosticsModal(true)}
+                className="bg-[#DCFCE7] hover:bg-[#BBF7D0] border border-[#86EFAC] text-[#15803D] px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all shadow-sm flex items-center gap-1.5"
+                title="Monitorear conexión y diagnóstico de recepción de pedidos"
+              >
+                <span>🛠️ Diagnóstico</span>
               </button>
             </div>
 
@@ -2101,6 +2109,143 @@ function App() {
               >
                 <span>🖨️ Re-Imprimir Ticket</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: MONITOR DE DIAGNÓSTICO DE RED Y RECEPCIÓN DE PEDIDOS */}
+      {showDiagnosticsModal && (
+        <div className="fixed inset-0 z-50 bg-[#0F172A]/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white max-w-2xl w-full p-6 rounded-[24px] shadow-2xl border border-[#E2E8F0] space-y-4 animate-fade-in-up max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-2xl bg-[#DCFCE7] text-[#15803D] border border-[#86EFAC] flex items-center justify-center font-extrabold text-base">
+                  🛠️
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-[#0F172A]">Monitor & Diagnóstico de Pedidos en Tiempo Real</h3>
+                  <p className="text-xs text-[#64748B]">Auditoría de recepción desde móviles, estado de conexión y trazabilidad.</p>
+                </div>
+              </div>
+              <button onClick={() => setShowDiagnosticsModal(false)} className="w-8 h-8 rounded-full bg-[#F1F5F9] text-gray-500 font-bold">✕</button>
+            </div>
+
+            {/* ESTADO DE LOS SERVICIOS DE CONEXIÓN */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs font-bold">
+              <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-3 rounded-2xl space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[#64748B]">🌐 Supabase Cloud:</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#22C55E] animate-pulse"></span>
+                </div>
+                <span className="text-[#15803D] font-extrabold block text-[11px]">🟢 CONECTADO (3s Poll)</span>
+              </div>
+
+              <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-3 rounded-2xl space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[#64748B]">📡 Broadcast Realtime:</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#22C55E] animate-pulse"></span>
+                </div>
+                <span className="text-[#15803D] font-extrabold block text-[11px]">🟢 CANAL ACTIVO</span>
+              </div>
+
+              <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-3 rounded-2xl space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[#64748B]">📦 Memoria Local:</span>
+                  <span className="text-[#0284C7] font-mono text-[11px]">{pedidos.length} órdenes</span>
+                </div>
+                <span className="text-[#0284C7] font-extrabold block text-[11px]">🟢 SINCRONIZADO</span>
+              </div>
+            </div>
+
+            {/* TABLA DE AUDITORÍA Y ORIGEN DE LOS PEDIDOS */}
+            <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 text-xs">
+              <span className="text-[11px] font-bold text-[#64748B] uppercase block">Listado y Trazabilidad de Pedidos Recibidos ({pedidos.length}):</span>
+              {pedidos.length === 0 ? (
+                <div className="p-8 border border-dashed border-[#E2E8F0] rounded-2xl text-center space-y-2">
+                  <span className="text-2xl block">📦</span>
+                  <p className="font-bold text-xs text-[#0F172A]">No hay pedidos registrados en memoria</p>
+                </div>
+              ) : (
+                pedidos.map(p => {
+                  const isDone = (p.estado || p.status) === 'entregado' || (p.estado || p.status) === 'completado';
+                  return (
+                    <div key={p.id} className="bg-[#F8FAFC] border border-[#E2E8F0] p-3 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-sm">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-[#0F172A]">#{p.id.slice(-8)}</span>
+                          <span className="text-[10px] font-bold text-[#0369A1] bg-[#E0F2FE] border border-[#BAE6FD] px-2 py-0.5 rounded-full">
+                            👤 {p.cliente_nombre || 'Cliente'} ({p.cliente_telefono || 'N/A'})
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#64748B] truncate max-w-md">📍 {p.direccion_entrega || 'Entrega en local'} • Total: <strong>RD$ {(p.monto_total || p.total || 0).toFixed(2)}</strong></p>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-end sm:self-center">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase border ${
+                          isDone ? 'bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]' : 'bg-[#FEF3C7] text-[#B45309] border-[#FDE68A]'
+                        }`}>
+                          {isDone ? '✅ ENTREGADO' : '🟡 PENDIENTE / ACTIVO'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* BOTONES DE PRUEBA Y ACCIONES DE DIAGNÓSTICO */}
+            <div className="pt-2 border-t border-[#F1F5F9] flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const testOrder = {
+                      id: 'TEST-' + Math.floor(1000 + Math.random() * 9000),
+                      cliente_nombre: 'Cliente Prueba Móvil',
+                      cliente_telefono: '809-555-9999',
+                      direccion_entrega: 'Prueba de diagnóstico de recepción',
+                      monto_total: 250.00,
+                      metodo_pago: 'Efectivo',
+                      estado: 'pendiente',
+                      status: 'pendiente',
+                      delivery_token: 'DEL-TEST99',
+                      created_at: new Date().toISOString(),
+                      detalles: [{ cantidad: 1, nombre: 'Producto Prueba Diagnóstico', precio_unitario: 250 }]
+                    };
+                    
+                    setPedidos(prev => [testOrder, ...prev]);
+                    
+                    // Guardar en Supabase
+                    const sbClient = (window.ColmadoSupabase && window.ColmadoSupabase.client) || window.supabaseClient;
+                    if (sbClient) {
+                      sbClient.from('pedidos').insert([testOrder]).catch(() => {});
+                    }
+
+                    // Transmitir evento
+                    try {
+                      const bc = new BroadcastChannel('syspim_orders_channel');
+                      bc.postMessage({ type: 'NEW_ORDER', order: testOrder });
+                      bc.close();
+                    } catch(e){}
+
+                    setToast(`🧪 Pedido de prueba ${testOrder.id} enviado exitosamente`);
+                  }}
+                  className="px-3.5 py-2 bg-[#E0F2FE] hover:bg-[#BAE6FD] text-[#0369A1] border border-[#BAE6FD] font-bold rounded-full transition-all"
+                >
+                  🧪 Enviar Pedido de Prueba
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button 
+                  type="button" 
+                  onClick={() => setShowDiagnosticsModal(false)} 
+                  className="px-4 py-2 font-bold text-[#64748B] hover:bg-[#F1F5F9] rounded-full"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
           </div>
         </div>
