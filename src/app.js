@@ -412,6 +412,10 @@ function App() {
 
   // ESTADO REALTIME DE PEDIDOS SOLICITADOS POR CLIENTES
   const [pedidos, setPedidos] = useState(() => {
+    try {
+      const saved = localStorage.getItem('syspim_pos_pedidos');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
     return window.AppState?.pedidos || [
       {
         id: 'PED-9081',
@@ -420,13 +424,20 @@ function App() {
         direccion_entrega: 'Calle Pepillo Salcedo #14, Ens. La Fe',
         monto_total: 545.00,
         metodo_pago: 'Efectivo (Paga con $1,000 - Devuelta: $455.00)',
-        estado: 'pendiente',
+        estado: 'entregado',
         delivery_token: 'DEL-8F3A29',
         created_at: new Date().toISOString(),
         detalles: [{ cantidad: 2, nombre: 'Rica Leche Listamilk Lt', precio_unitario: 76 }]
       }
     ];
   });
+
+  // Sincronizar pedidos con localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('syspim_pos_pedidos', JSON.stringify(pedidos));
+    } catch (e) {}
+  }, [pedidos]);
 
   // Búsqueda y Filtros POS / Catálogo
   const [searchQuery, setSearchQuery] = useState('');
@@ -568,6 +579,10 @@ function App() {
       broadcast.onmessage = (event) => {
         if (event.data && event.data.type === 'NEW_ORDER' && event.data.order) {
           handleNewOrder(event.data.order);
+        } else if (event.data && event.data.type === 'STATUS_UPDATE' && event.data.order) {
+          const updated = event.data.order;
+          setPedidos(prev => prev.map(p => p.id === updated.id ? { ...p, estado: updated.estado, status: updated.estado } : p));
+          setToast(`✨ Pedido #${updated.id.slice(-6)} actualizado a ${updated.estado.toUpperCase()}`);
         }
       };
     } catch (e) {
@@ -1419,6 +1434,20 @@ function App() {
                                 className="flex-1 sm:flex-initial px-3.5 py-2 bg-[#15803D] hover:bg-[#166534] text-white font-bold rounded-full text-xs shadow-md shadow-[#15803D]/20 flex items-center justify-center gap-1 transition-all"
                               >
                                 📲 Enviar a Delivery
+                              </button>
+
+                              {/* BOTÓN 3: ELIMINAR PEDIDO */}
+                              <button
+                                onClick={() => {
+                                  if (confirm(`¿Deseas eliminar el pedido #${ped.id.slice(-8)} de la lista?`)) {
+                                    setPedidos(prev => prev.filter(p => p.id !== ped.id));
+                                    setToast(`🗑️ Pedido #${ped.id.slice(-8)} eliminado`);
+                                  }
+                                }}
+                                className="px-3 py-2 bg-[#FEE2E2] hover:bg-[#FCA5A5] text-[#DC2626] border border-[#FECACA] font-extrabold rounded-full text-xs transition-all flex items-center justify-center shadow-sm"
+                                title="Eliminar este pedido de la lista"
+                              >
+                                🗑️
                               </button>
                             </div>
                           </div>
