@@ -437,6 +437,38 @@ function App() {
   const [selectedCustomer, setSelectedCustomer] = useState('consumidor_final');
   const [paymentMethod, setPaymentMethod] = useState('efectivo');
 
+  // ESTADO DEL DIRECTORIO DE CLIENTES DEL COLMADO
+  const [clientesList, setClientesList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('syspim_clientes_list');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [
+      { id: 'c-101', nombre: 'Carlos Mendoza', telefono: '8095550199', direccion: 'Calle Pepillo Salcedo #14, Ens. La Fe', tipo: 'credito', pedidosCount: 14, totalComprado: 8950.00, ultimoPedido: 'Hoy 18:30' },
+      { id: 'c-102', nombre: 'María Rodríguez', telefono: '8095131416', direccion: 'Av. 27 de Febrero #45, Apt. 3B', tipo: 'contado', pedidosCount: 8, totalComprado: 4320.00, ultimoPedido: 'Ayer' },
+      { id: 'c-103', nombre: 'José Luis Almonte', telefono: '8095550122', direccion: 'Calle El Conde #102', tipo: 'credito', pedidosCount: 22, totalComprado: 15400.00, ultimoPedido: 'Hace 2 días' },
+      { id: 'c-104', nombre: 'Ana Julia Peralta', telefono: '8095550188', direccion: 'Calle Sol #5, Los Prados', tipo: 'contado', pedidosCount: 5, totalComprado: 2890.00, ultimoPedido: 'Hace 3 días' }
+    ];
+  });
+
+  // Sincronizar directorio de clientes con localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('syspim_clientes_list', JSON.stringify(clientesList));
+    } catch (e) {}
+  }, [clientesList]);
+
+  // Estados para modales de clientes y compartir PWA por WhatsApp
+  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+  const [newCustName, setNewCustName] = useState('');
+  const [newCustPhone, setNewCustPhone] = useState('');
+  const [newCustAddress, setNewCustAddress] = useState('');
+  const [newCustType, setNewCustType] = useState('contado');
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+
+  const [showSharePwaModal, setShowSharePwaModal] = useState(false);
+  const [sharePhone, setSharePhone] = useState('');
+
   // Modales & Toast
   const [checkoutResult, setCheckoutResult] = useState(null);
   const [toast, setToast] = useState(null);
@@ -450,6 +482,39 @@ function App() {
         if (prev.some(p => p.id === newOrder.id)) return prev;
         return [newOrder, ...prev];
       });
+
+      // Auto-registrar cliente en el directorio del colmado si no existe
+      if (newOrder.cliente_nombre) {
+        setClientesList(prev => {
+          const phone = newOrder.cliente_telefono || '';
+          const existingIdx = prev.findIndex(c => (phone && c.telefono === phone) || c.nombre.toLowerCase() === newOrder.cliente_nombre.toLowerCase());
+          const orderAmount = newOrder.monto_total || newOrder.total || 0;
+          
+          if (existingIdx >= 0) {
+            const updated = [...prev];
+            updated[existingIdx] = {
+              ...updated[existingIdx],
+              pedidosCount: (updated[existingIdx].pedidosCount || 0) + 1,
+              totalComprado: (updated[existingIdx].totalComprado || 0) + orderAmount,
+              ultimoPedido: 'Hoy',
+              direccion: newOrder.direccion_entrega || updated[existingIdx].direccion
+            };
+            return updated;
+          } else {
+            const newCustomerObj = {
+              id: 'c-' + Date.now(),
+              nombre: newOrder.cliente_nombre,
+              telefono: newOrder.cliente_telefono || '',
+              direccion: newOrder.direccion_entrega || '',
+              tipo: 'contado',
+              pedidosCount: 1,
+              totalComprado: orderAmount,
+              ultimoPedido: 'Hoy'
+            };
+            return [newCustomerObj, ...prev];
+          }
+        });
+      }
 
       // Actualizar memoria global
       if (window.AppState) {
@@ -657,11 +722,22 @@ function App() {
                 <span className="text-[#0284C7] font-extrabold text-xs">{activeTenant?.nombre || 'Colmado Don Pedro'}</span>
               </div>
 
-              <button onClick={() => showToast('🔗 Enlace copiado')} className="bg-[#F1F5F9] hover:bg-[#E2E8F0] border border-[#CBD5E1] text-[#0F172A] px-3.5 py-1.5 rounded-full text-xs font-bold transition-all">
+              <button 
+                onClick={() => {
+                  const slug = activeTenant?.slug || 'colmado-don-pedro';
+                  const link = `${window.location.origin}${window.location.pathname.replace(/\/index\.html$/, '')}/catalog.html?tenant=${slug}`;
+                  navigator.clipboard?.writeText(link);
+                  setToast('🔗 Enlace del catálogo digital copiado');
+                }} 
+                className="bg-[#F1F5F9] hover:bg-[#E2E8F0] border border-[#CBD5E1] text-[#0F172A] px-3.5 py-1.5 rounded-full text-xs font-bold transition-all"
+              >
                 🔗 Copiar Link
               </button>
-              <button onClick={() => showToast('📲 WhatsApp listo')} className="bg-[#0284C7] hover:bg-[#0369A1] text-white px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-md shadow-[#0284C7]/20">
-                📲 Enviar a Cliente
+              <button 
+                onClick={() => setShowSharePwaModal(true)} 
+                className="bg-[#0284C7] hover:bg-[#0369A1] text-white px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-md shadow-[#0284C7]/20 flex items-center gap-1.5"
+              >
+                <span>📲 Enviar a Cliente por WhatsApp</span>
               </button>
             </div>
 
@@ -673,7 +749,8 @@ function App() {
               {[
                 { id: 'pos', icon: '🛒', label: 'Punto de Venta (POS)' },
                 { id: 'inventory', icon: '📦', label: `Inventario (${tenantProducts.length})` },
-                { id: 'orders', icon: '📋', label: 'Pedidos & Delivery' }
+                { id: 'orders', icon: '📋', label: `Pedidos & Delivery (${pedidos.length})` },
+                { id: 'customers', icon: '👥', label: `Clientes (${clientesList.length})` }
               ].map(m => (
                 <button
                   key={m.id}
@@ -1108,9 +1185,40 @@ function App() {
                       <span className="font-extrabold text-sm text-[#0F172A] font-jakarta block">#{ped.id.slice(-8)} • {ped.cliente_nombre || ped.customer_info?.nombre || 'Cliente'}</span>
                       <span className="text-[11px] text-[#64748B] font-mono">📞 {ped.cliente_telefono || 'Sin Teléfono'}</span>
                     </div>
-                    <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A]">
-                      {ped.estado || ped.status || 'pendiente'}
-                    </span>
+                    {/* SELECTOR DE ESTADO INTERACTIVO */}
+                    <select
+                      value={ped.estado || ped.status || 'pendiente'}
+                      onChange={(e) => {
+                        const newStatus = e.target.value;
+                        setPedidos(prev => prev.map(p => {
+                          if (p.id === ped.id) {
+                            const updated = { ...p, estado: newStatus, status: newStatus };
+                            try {
+                              const broadcast = new BroadcastChannel('syspim_orders_channel');
+                              broadcast.postMessage({ type: 'STATUS_UPDATE', order: updated });
+                              broadcast.close();
+                            } catch (err) {}
+                            return updated;
+                          }
+                          return p;
+                        }));
+                        setToast(`✅ Estado del pedido marcado como: ${newStatus.toUpperCase()}`);
+                      }}
+                      className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase border cursor-pointer focus:outline-none transition-all ${
+                        (ped.estado || ped.status) === 'completado' || (ped.estado || ped.status) === 'entregado'
+                          ? 'bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]'
+                          : (ped.estado || ped.status) === 'en_camino' || (ped.estado || ped.status) === 'despachado'
+                          ? 'bg-[#E0F2FE] text-[#0284C7] border-[#BAE6FD]'
+                          : (ped.estado || ped.status) === 'cancelado'
+                          ? 'bg-[#FEE2E2] text-[#DC2626] border-[#FECACA]'
+                          : 'bg-[#FEF3C7] text-[#B45309] border-[#FDE68A]'
+                      }`}
+                    >
+                      <option value="pendiente" className="bg-white text-[#B45309]">🟡 PENDIENTE</option>
+                      <option value="en_camino" className="bg-white text-[#0284C7]">🛵 EN CAMINO</option>
+                      <option value="completado" className="bg-white text-[#15803D]">✅ ENTREGADO</option>
+                      <option value="cancelado" className="bg-white text-[#DC2626]">❌ CANCELADO</option>
+                    </select>
                   </div>
 
                   <div className="space-y-1 text-[#64748B]">
@@ -1138,6 +1246,31 @@ function App() {
                     </span>
 
                     <div className="flex items-center gap-2 w-full sm:w-auto">
+                      {/* BOTÓN RÁPIDO PARA CAMBIAR DE ESTADO PENDIENTE -> EN CAMINO -> ENTREGADO */}
+                      {(ped.estado || ped.status || 'pendiente') === 'pendiente' && (
+                        <button
+                          onClick={() => {
+                            setPedidos(prev => prev.map(p => p.id === ped.id ? { ...p, estado: 'en_camino', status: 'en_camino' } : p));
+                            setToast(`🛵 Pedido marcado como EN CAMINO`);
+                          }}
+                          className="flex-1 sm:flex-initial px-3 py-2 bg-[#FEF3C7] hover:bg-[#FDE68A] text-[#B45309] border border-[#FDE68A] font-extrabold rounded-full text-xs flex items-center justify-center gap-1 transition-all"
+                        >
+                          🛵 Despachar
+                        </button>
+                      )}
+
+                      {((ped.estado || ped.status) === 'en_camino' || (ped.estado || ped.status) === 'despachado') && (
+                        <button
+                          onClick={() => {
+                            setPedidos(prev => prev.map(p => p.id === ped.id ? { ...p, estado: 'completado', status: 'completado' } : p));
+                            setToast(`✅ Pedido completado y marcado como ENTREGADO`);
+                          }}
+                          className="flex-1 sm:flex-initial px-3 py-2 bg-[#DCFCE7] hover:bg-[#BBF7D0] text-[#15803D] border border-[#86EFAC] font-extrabold rounded-full text-xs flex items-center justify-center gap-1 transition-all"
+                        >
+                          ✅ Completar
+                        </button>
+                      )}
+
                       {/* BOTÓN 1: IMPRIMIR TICKET TÉRMICO */}
                       <button 
                         onClick={() => {
@@ -1207,12 +1340,280 @@ function App() {
           </div>
         )}
 
+        {/* ================= MODULO: DIRECTORIO DE CLIENTES DEL COLMADO ================= */}
+        {activeTab === 'customers' && (
+          <div className="bg-[#FFFFFF] border border-[#E2E8F0] p-6 rounded-[20px] shadow-[0_4px_20px_rgba(0,0,0,0.04)] space-y-6 animate-fade-in-up">
+            
+            {/* HEADER DEL MÓDULO DE CLIENTES */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-[#E2E8F0]">
+              <div>
+                <h3 className="font-extrabold text-xl text-[#0F172A] font-jakarta flex items-center gap-2">
+                  <span>👥 Directorio de Clientes</span>
+                  <span className="text-xs bg-[#E0F2FE] text-[#0284C7] border border-[#BAE6FD] px-3 py-0.5 rounded-full font-bold">
+                    {clientesList.length} registrados
+                  </span>
+                </h3>
+                <p className="text-xs text-[#64748B] mt-0.5">Gestión de clientes, historial de compras, fiaos/créditos y envío de catálogo por WhatsApp.</p>
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  onClick={() => setShowSharePwaModal(true)}
+                  className="flex-1 sm:flex-initial px-4 py-2 bg-[#E0F2FE] hover:bg-[#BAE6FD] text-[#0369A1] font-bold text-xs rounded-full border border-[#BAE6FD] transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                >
+                  <span>📲 Compartir Catálogo PWA</span>
+                </button>
+                <button
+                  onClick={() => setShowAddCustomerModal(true)}
+                  className="flex-1 sm:flex-initial px-4 py-2 bg-[#0284C7] hover:bg-[#0369A1] text-white font-bold text-xs rounded-full shadow-md shadow-[#0284C7]/20 transition-all flex items-center justify-center gap-1.5"
+                >
+                  <span>+ Agregar Cliente</span>
+                </button>
+              </div>
+            </div>
+
+            {/* BARRA DE BÚSQUEDA DE CLIENTES */}
+            <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-3 rounded-full flex items-center gap-3 shadow-sm">
+              <span className="text-base text-[#94A3B8] ml-2">🔍</span>
+              <input
+                type="text"
+                value={customerSearchQuery}
+                onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                placeholder="Buscar cliente por nombre, teléfono o dirección..."
+                className="bg-transparent w-full text-[#0F172A] text-xs font-bold placeholder-[#94A3B8] focus:outline-none"
+              />
+              {customerSearchQuery && (
+                <button onClick={() => setCustomerSearchQuery('')} className="text-xs text-[#94A3B8] hover:text-[#0F172A] pr-2">✕</button>
+              )}
+            </div>
+
+            {/* TARJETAS / DIRECTORIO DE CLIENTES */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {clientesList
+                .filter(c => {
+                  const q = customerSearchQuery.toLowerCase();
+                  return c.nombre.toLowerCase().includes(q) || (c.telefono || '').includes(q) || (c.direccion || '').toLowerCase().includes(q);
+                })
+                .map(cust => {
+                  const cleanPhone = (cust.telefono || '').replace(/[^0-9]/g, '');
+                  const initial = cust.nombre ? cust.nombre.charAt(0).toUpperCase() : '👤';
+                  
+                  return (
+                    <div key={cust.id} className="bg-[#F8FAFC] border border-[#E2E8F0] p-5 rounded-[18px] flex flex-col justify-between gap-4 shadow-sm hover:border-[#BAE6FD] hover:shadow-md transition-all">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-11 h-11 rounded-2xl bg-[#E0F2FE] border border-[#BAE6FD] text-[#0284C7] flex items-center justify-center font-extrabold text-base shadow-sm">
+                            {initial}
+                          </div>
+                          <div>
+                            <h4 className="font-extrabold text-sm text-[#0F172A] font-jakarta flex items-center gap-2">
+                              {cust.nombre}
+                              {cust.tipo === 'credito' && (
+                                <span className="bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A] text-[9px] font-bold px-2 py-0.5 rounded-full uppercase">
+                                  📒 Fiado / Crédito
+                                </span>
+                              )}
+                            </h4>
+                            <span className="text-[11px] font-mono text-[#64748B] block mt-0.5">
+                              📞 {cust.telefono || 'Sin teléfono'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <span className="text-[10px] font-bold text-[#64748B] bg-white border border-[#E2E8F0] px-2.5 py-1 rounded-full whitespace-nowrap">
+                          {cust.pedidosCount || 0} pedidos
+                        </span>
+                      </div>
+
+                      <div className="bg-white border border-[#E2E8F0] p-3 rounded-xl space-y-1 text-xs">
+                        <div className="flex items-start gap-1.5 text-[#64748B]">
+                          <span className="flex-shrink-0">📍</span>
+                          <span className="font-semibold text-[#0F172A] leading-tight">{cust.direccion || 'Dirección no registrada'}</span>
+                        </div>
+                        <div className="flex items-center justify-between pt-1 border-t border-[#F1F5F9] text-[11px]">
+                          <span className="text-[#64748B]">Total Comprado: <strong className="text-[#15803D]">RD$ {(cust.totalComprado || 0).toFixed(2)}</strong></span>
+                          <span className="text-[#94A3B8] text-[10px]">Último: {cust.ultimoPedido || 'N/A'}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-1">
+                        <button
+                          onClick={() => {
+                            const slug = activeTenant?.slug || 'colmado-don-pedro';
+                            const link = `${window.location.origin}${window.location.pathname.replace(/\/index\.html$/, '')}/catalog.html?tenant=${slug}`;
+                            const msg = `Hola ${cust.nombre}! 🛍️ Te compartimos nuestro Catálogo Digital Oficial de ${activeTenant?.nombre || 'Colmado Don Pedro'}.\n\nHaz tu pedido a domicilio aquí:\n${link}`;
+                            window.open(`https://wa.me/${cleanPhone ? '1' + cleanPhone : ''}?text=${encodeURIComponent(msg)}`, '_blank');
+                          }}
+                          className="flex-1 px-3 py-2 bg-[#15803D] hover:bg-[#166534] text-white text-xs font-bold rounded-full shadow-sm flex items-center justify-center gap-1.5 transition-all"
+                        >
+                          <span>📲 WhatsApp</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedCustomer(cust.id);
+                            setActiveTab('pos');
+                            setToast(`👤 Cliente ${cust.nombre} seleccionado en Caja`);
+                          }}
+                          className="flex-1 px-3 py-2 bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-bold rounded-full shadow-sm flex items-center justify-center gap-1.5 transition-all"
+                        >
+                          <span>🛒 Vender en POS</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+
+          </div>
+        )}
+
         {/* ================= MODULO 4: SUPER ADMIN SAAS ================= */}
         {activeTab === 'superadmin' && (
           <SuperAdminContainer />
         )}
 
       </main>
+
+      {/* MODAL: REGISTRAR NUEVO CLIENTE */}
+      {showAddCustomerModal && (
+        <div className="fixed inset-0 z-50 bg-[#0F172A]/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white max-w-md w-full p-6 rounded-[24px] shadow-2xl border border-[#E2E8F0] space-y-4 animate-fade-in-up">
+            <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
+              <h3 className="font-extrabold text-base text-[#0F172A] flex items-center gap-2">
+                <span>👤 Registrar Nuevo Cliente</span>
+              </h3>
+              <button onClick={() => setShowAddCustomerModal(false)} className="w-8 h-8 rounded-full bg-[#F1F5F9] text-gray-500 font-bold">✕</button>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (!newCustName.trim()) return;
+              const newC = {
+                id: 'c-' + Date.now(),
+                nombre: newCustName.trim(),
+                telefono: newCustPhone.trim(),
+                direccion: newCustAddress.trim(),
+                tipo: newCustType,
+                pedidosCount: 0,
+                totalComprado: 0,
+                ultimoPedido: 'Reciente'
+              };
+              setClientesList(prev => [newC, ...prev]);
+              setNewCustName('');
+              setNewCustPhone('');
+              setNewCustAddress('');
+              setShowAddCustomerModal(false);
+              setToast(`✅ Cliente ${newC.nombre} guardado`);
+            }} className="space-y-3.5 text-xs font-bold">
+              <div>
+                <label className="text-[#64748B] block mb-1">Nombre Completo *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej: Juan Pérez"
+                  value={newCustName}
+                  onChange={(e) => setNewCustName(e.target.value)}
+                  className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-3.5 py-2.5 text-xs text-[#0F172A] focus:outline-none focus:border-[#0284C7]"
+                />
+              </div>
+
+              <div>
+                <label className="text-[#64748B] block mb-1">Teléfono / WhatsApp</label>
+                <input
+                  type="text"
+                  placeholder="Ej: 809-555-0100"
+                  value={newCustPhone}
+                  onChange={(e) => setNewCustPhone(e.target.value)}
+                  className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-3.5 py-2.5 text-xs text-[#0F172A] focus:outline-none focus:border-[#0284C7]"
+                />
+              </div>
+
+              <div>
+                <label className="text-[#64748B] block mb-1">Dirección de Entrega</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Calle Principal #45, Apt 2B"
+                  value={newCustAddress}
+                  onChange={(e) => setNewCustAddress(e.target.value)}
+                  className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-3.5 py-2.5 text-xs text-[#0F172A] focus:outline-none focus:border-[#0284C7]"
+                />
+              </div>
+
+              <div>
+                <label className="text-[#64748B] block mb-1">Tipo de Cuenta</label>
+                <select
+                  value={newCustType}
+                  onChange={(e) => setNewCustType(e.target.value)}
+                  className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-3.5 py-2.5 text-xs text-[#0F172A] focus:outline-none focus:border-[#0284C7]"
+                >
+                  <option value="contado">Contado (Pago Inmediato)</option>
+                  <option value="credito">Fiado / Crédito</option>
+                </select>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button type="button" onClick={() => setShowAddCustomerModal(false)} className="px-4 py-2 text-xs font-bold text-[#64748B] hover:bg-[#F1F5F9] rounded-full">Cancelar</button>
+                <button type="submit" className="px-5 py-2 text-xs font-bold bg-[#0284C7] hover:bg-[#0369A1] text-white rounded-full shadow-md shadow-[#0284C7]/20">Guardar Cliente</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: COMPARTIR CATÁLOGO PWA POR WHATSAPP */}
+      {showSharePwaModal && (
+        <div className="fixed inset-0 z-50 bg-[#0F172A]/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white max-w-md w-full p-6 rounded-[24px] shadow-2xl border border-[#E2E8F0] space-y-4 animate-fade-in-up">
+            <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
+              <h3 className="font-extrabold text-base text-[#0F172A] flex items-center gap-2">
+                <span>📲 Compartir PWA por WhatsApp</span>
+              </h3>
+              <button onClick={() => setShowSharePwaModal(false)} className="w-8 h-8 rounded-full bg-[#F1F5F9] text-gray-500 font-bold">✕</button>
+            </div>
+
+            <p className="text-xs text-[#64748B]">Envía el catálogo digital de tu colmado a tus clientes para que hagan pedidos a domicilio fácilmente desde su celular.</p>
+
+            <div className="space-y-3 text-xs font-bold">
+              <div>
+                <label className="text-[#64748B] block mb-1">Teléfono del Cliente (WhatsApp)</label>
+                <input
+                  type="text"
+                  placeholder="Ej: 809-555-0100"
+                  value={sharePhone}
+                  onChange={(e) => setSharePhone(e.target.value)}
+                  className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-3.5 py-2.5 text-xs text-[#0F172A] focus:outline-none focus:border-[#0284C7]"
+                />
+              </div>
+
+              <div className="bg-[#E0F2FE] border border-[#BAE6FD] p-3 rounded-xl space-y-1">
+                <span className="text-[10px] uppercase font-bold text-[#0369A1]">Mensaje que recibirá el cliente:</span>
+                <p className="text-[11px] text-[#0284C7] font-normal leading-relaxed">
+                  "¡Hola! Te compartimos nuestro Catálogo Digital Oficial de {activeTenant?.nombre || 'Colmado Don Pedro'} 🛍️. Haz tus pedidos a domicilio directamente desde aquí: {window.location.origin}/catalog.html?tenant={activeTenant?.slug || 'colmado-don-pedro'}"
+                </p>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button type="button" onClick={() => setShowSharePwaModal(false)} className="px-4 py-2 text-xs font-bold text-[#64748B] hover:bg-[#F1F5F9] rounded-full">Cancelar</button>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    const cleanPhone = sharePhone.replace(/[^0-9]/g, '');
+                    const slug = activeTenant?.slug || 'colmado-don-pedro';
+                    const pwaUrl = `${window.location.origin}${window.location.pathname.replace(/\/index\.html$/, '')}/catalog.html?tenant=${slug}`;
+                    const msg = `¡Hola! 🛍️ Te compartimos nuestro Catálogo Digital Oficial de ${activeTenant?.nombre || 'Colmado Don Pedro'}.\n\nHaz tus pedidos a domicilio directamente desde aquí:\n${pwaUrl}`;
+                    window.open(`https://wa.me/${cleanPhone ? '1' + cleanPhone : ''}?text=${encodeURIComponent(msg)}`, '_blank');
+                    setShowSharePwaModal(false);
+                    setToast('📲 WhatsApp abierto');
+                  }} 
+                  className="px-5 py-2 text-xs font-bold bg-[#15803D] hover:bg-[#166534] text-white rounded-full shadow-md shadow-[#15803D]/20 flex items-center gap-1.5"
+                >
+                  <span>📲 Abrir WhatsApp</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL CHECKOUT CONFIRMACION */}
       {checkoutResult && (

@@ -278,6 +278,44 @@
             {/* CONTENIDO PRINCIPAL DEL CATÁLOGO */}
             <main className="max-w-4xl mx-auto w-full px-4 py-6 flex-1 space-y-5 pb-28">
               
+              {/* BANNER DE BIENVENIDA / AUTOCONFIGURACIÓN PARA PRIMERAS VISITAS DESDE WHATSAPP */}
+              {!savedProfile ? (
+                <div className="bg-[#E0F2FE] border border-[#BAE6FD] p-4 rounded-[20px] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm animate-fade-in-up">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">👋</span>
+                    <div>
+                      <h4 className="font-extrabold text-xs sm:text-sm text-[#0369A1]">¡Bienvenido al Catálogo Digital de {colmadoNombre}!</h4>
+                      <p className="text-[11px] text-[#0284C7] mt-0.5">Configura tu nombre y dirección en 1 paso para enviarte tus pedidos a domicilio.</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setIsEditingProfile(true);
+                      setShowOrderModal(true);
+                    }}
+                    className="w-full sm:w-auto px-4 py-2 bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-bold rounded-full shadow-md shadow-[#0284C7]/20 whitespace-nowrap transition-all"
+                  >
+                    ⚙️ Configurar Mis Datos
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-white border border-[#E2E8F0] p-3 px-4 rounded-[16px] flex items-center justify-between text-xs text-[#64748B] shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">👤</span>
+                    <span>Hola <strong className="text-[#0F172A]">{customerName}</strong> (📍 {customerAddress})</span>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setIsEditingProfile(true);
+                      setShowOrderModal(true);
+                    }}
+                    className="text-[#0284C7] hover:underline font-bold text-[11px]"
+                  >
+                    ✏️ Editar Datos
+                  </button>
+                </div>
+              )}
+              
               {/* BUSCADOR ROUNDED PILL */}
               <div className="bg-white border border-[#E2E8F0] p-3 rounded-full shadow-sm flex items-center gap-3">
                 <span className="text-lg text-[#94A3B8] ml-2">🔍</span>
