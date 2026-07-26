@@ -524,9 +524,33 @@ function App() {
 
   // ESCUCHADOR REALTIME CROSS-TAB & SUPABASE PARA NUEVOS PEDIDOS DE CLIENTES
   useEffect(() => {
-    const handleNewOrder = (newOrder) => {
+    const handleNewOrder = (rawOrder) => {
+      if (!rawOrder) return;
+      
+      const isUuid = (rawOrder.id || '').length > 20 && (rawOrder.id || '').includes('-');
+      const displayId = isUuid ? ('PED-' + rawOrder.id.slice(-6).toUpperCase()) : rawOrder.id;
+
+      let detallesParsed = rawOrder.detalles;
+      if (typeof detallesParsed === 'string') {
+        try { detallesParsed = JSON.parse(detallesParsed); } catch(e){ detallesParsed = null; }
+      }
+      if (!detallesParsed || !Array.isArray(detallesParsed) || detallesParsed.length === 0) {
+        detallesParsed = [{ cantidad: 1, nombre: 'Pedido desde Móvil PWA', precio_unitario: Number(rawOrder.monto_total || 0) }];
+      }
+
+      const newOrder = {
+        ...rawOrder,
+        id: displayId,
+        uuid: rawOrder.id,
+        estado: rawOrder.estado || rawOrder.status || 'pendiente',
+        status: rawOrder.estado || rawOrder.status || 'pendiente',
+        metodo_pago: rawOrder.metodo_pago ? (rawOrder.metodo_pago.charAt(0).toUpperCase() + rawOrder.metodo_pago.slice(1)) : 'Efectivo',
+        monto_total: Number(rawOrder.monto_total || rawOrder.total || 0),
+        detalles: detallesParsed
+      };
+
       setPedidos(prev => {
-        if (prev.some(p => p.id === newOrder.id)) return prev;
+        if (prev.some(p => p.id === newOrder.id || (p.uuid && p.uuid === newOrder.uuid))) return prev;
         return [newOrder, ...prev];
       });
 
