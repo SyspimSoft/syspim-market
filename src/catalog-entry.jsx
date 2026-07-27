@@ -321,12 +321,12 @@ import '../styles.css';
 
           // Descontar existencias
           const updatedProducts = currentProducts.map(prod => {
-            const cartItem = cart.find(i => i.id === prod.id || (i.nombre || '').toLowerCase() === (prod.nombre || '').toLowerCase());
+            const cartItem = cart.find(i => i.id === prod.id || (i.nombre || '').toLowerCase().trim() === (prod.nombre || '').toLowerCase().trim());
             if (cartItem) {
               const newStock = Math.max(0, (prod.stock || 0) - cartItem.qty);
-              return { ...prod, stock: newStock };
+              return { ...prod, stock: newStock, tenant_id: prod.tenant_id || 't-001' };
             }
-            return prod;
+            return { ...prod, tenant_id: prod.tenant_id || 't-001' };
           });
 
           // Actualizar estado local, localStorage y difundir evento de stock por BroadcastChannel

@@ -1216,6 +1216,27 @@ function App() {
           });
         }
 
+        // Descontar inventario automáticamente en el POS si vienen detalles de productos
+        if (detallesParsed && Array.isArray(detallesParsed) && detallesParsed.length > 0) {
+          setProductos(prevProds => {
+            const updated = prevProds.map(prod => {
+              const item = detallesParsed.find(d => 
+                (d.id && d.id === prod.id) || 
+                ((d.nombre || '').toLowerCase().trim() === (prod.nombre || '').toLowerCase().trim())
+              );
+              if (item) {
+                const qty = Number(item.cantidad || item.qty || 1);
+                return { ...prod, stock: Math.max(0, (prod.stock || 0) - qty), tenant_id: prod.tenant_id || 't-001' };
+              }
+              return { ...prod, tenant_id: prod.tenant_id || 't-001' };
+            });
+            try {
+              localStorage.setItem('syspim_productos_list', JSON.stringify(updated));
+            } catch(e){}
+            return updated;
+          });
+        }
+
         return [newOrder, ...prev];
       });
 
@@ -1370,7 +1391,7 @@ function App() {
   }, [pedidos]);
 
   const tenantProducts = useMemo(() => {
-    return productos.filter(p => p.tenant_id === activeTenantId);
+    return productos.filter(p => !p.tenant_id || p.tenant_id === activeTenantId || p.tenant_id === 't-001');
   }, [productos, activeTenantId]);
 
   const filteredProducts = useMemo(() => {
@@ -1441,12 +1462,12 @@ function App() {
 
     // 2. Descontar inventario
     const updatedProductos = currentProds.map(prod => {
-      const cartItem = cart.find(item => item.id === prod.id || (item.nombre || '').toLowerCase() === (prod.nombre || '').toLowerCase());
+      const cartItem = cart.find(item => item.id === prod.id || (item.nombre || '').toLowerCase().trim() === (prod.nombre || '').toLowerCase().trim());
       if (cartItem) {
         const newStock = Math.max(0, (prod.stock || 0) - cartItem.qty);
-        return { ...prod, stock: newStock };
+        return { ...prod, stock: newStock, tenant_id: prod.tenant_id || 't-001' };
       }
-      return prod;
+      return { ...prod, tenant_id: prod.tenant_id || 't-001' };
     });
 
     setProductos(updatedProductos);
