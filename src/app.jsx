@@ -2,6 +2,7 @@
 // Código completo funcional con React y Tailwind CSS
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { notifyStockUpdate } from './utils/broadcast.js';
 
 // --- DATOS DEMO DE COLMADOS MULTI-TENANT ---
 const DEMO_TENANTS = [
@@ -1453,7 +1454,7 @@ function App() {
     } catch (e) {}
 
     for (const item of cart) {
-      const p = currentProds.find(prod => prod.id === item.id || (prod.nombre || '').toLowerCase() === (item.nombre || '').toLowerCase());
+      const p = currentProds.find(prod => String(prod.id) === String(item.id) || (prod.nombre || '').toLowerCase().trim() === (item.nombre || '').toLowerCase().trim());
       if (p && (p.stock || 0) < item.qty) {
         showToast(`⚠️ No hay suficiente stock para "${item.nombre}". Stock: ${p.stock || 0}`);
         return;
@@ -1462,7 +1463,7 @@ function App() {
 
     // 2. Descontar inventario
     const updatedProductos = currentProds.map(prod => {
-      const cartItem = cart.find(item => item.id === prod.id || (item.nombre || '').toLowerCase().trim() === (prod.nombre || '').toLowerCase().trim());
+      const cartItem = cart.find(item => String(item.id) === String(prod.id) || (item.nombre || '').toLowerCase().trim() === (prod.nombre || '').toLowerCase().trim());
       if (cartItem) {
         const newStock = Math.max(0, (prod.stock || 0) - cartItem.qty);
         return { ...prod, stock: newStock, tenant_id: prod.tenant_id || 't-001' };
@@ -1477,9 +1478,7 @@ function App() {
 
     // Notificar por BroadcastChannel
     try {
-      const bc = new BroadcastChannel('syspim_orders_channel');
-      bc.postMessage({ type: 'STOCK_UPDATE', payload: updatedProductos });
-      bc.close();
+      notifyStockUpdate(updatedProductos);
     } catch (e) {}
 
     const recVal = Number(cashReceived) || cartTotal;
