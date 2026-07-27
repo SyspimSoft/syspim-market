@@ -70,6 +70,14 @@
 
 ## 📜 4. HISTORIAL DE ACTUALIZACIONES (CHANGELOG)
 
+### **[2026-07-26] - Migración Arquitectónica a Entorno Bundled (Vite + React + Tailwind CSS Local)**
+* **Entorno de Compilación de Producción (Vite, PostCSS & Autoprefixer):**
+  1. **Eliminación del 100% de CDNs en tiempo real:** Removidas las cargas de `cdn.tailwindcss.com`, `@babel/standalone` y scripts UMD de React/ReactDOM en favor de compilación nativa en tiempo de build con Vite (`npm run build`).
+  2. **Tailwind CSS Local:** Instalados y configurados `tailwindcss`, `postcss` y `autoprefixer` con directivas `@tailwind` en `styles.css` y escaneo completo de archivos en `tailwind.config.js`.
+  3. **Puntos de Entrada ESM:** Creación de `src/main.jsx`, `src/catalog-entry.jsx`, `src/delivery-entry.jsx` e integración con `<script type="module">`.
+  4. **Compilación Multi-Página (MPA):** Configuración de `vite.config.js` con entradas Rollup para `index.html`, `catalog.html`, `delivery.html` y `superadmin.html`.
+  5. **Salida Optimizada en `dist/`:** `vercel.json` ajustado para servir la carpeta empaquetada y minificada en producción.
+
 ### **[2026-07-26] - Sincronización Vercel / Localhost, Estrategia Anti-Caché & Favicon Assets**
 * **Sincronización & Caché Vercel (vercel.json, index.html & sw.js):**
   1. Configuración de cabeceras anti-caché HTTP (`no-cache, no-store, must-revalidate`) en `vercel.json` y meta-tags en `index.html` para erradicar el desfasamiento ("divorcio") entre `localhost:3000` y las vistas desplegadas en Vercel CDN.

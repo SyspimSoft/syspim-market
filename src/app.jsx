@@ -1,7 +1,7 @@
 // SYSPIM MARKET - INTEGRACIÓN DEL CATÁLOGO DE PRODUCTOS (catalogoProductos)
 // Código completo funcional con React y Tailwind CSS
 
-const { useState, useEffect, useRef, useMemo } = React;
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 // --- DATOS DEMO DE COLMADOS MULTI-TENANT ---
 const DEMO_TENANTS = [
@@ -3097,7 +3097,8 @@ function App() {
 }
 
 // Exportar globalmente por si se importa en otros módulos
-window.catalogoProductos = catalogoProductos;
+if (typeof window !== 'undefined') {
+  window.catalogoProductos = catalogoProductos;
+}
 
-// Render React App into #root
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+export default App;

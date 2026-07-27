@@ -1,6 +1,7 @@
 {
   "version": 2,
-  "cleanUrls": true,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "headers": [
     {
       "source": "/(.*)",
@@ -18,12 +19,6 @@
           "value": "0"
         }
       ]
-    }
-  ],
-  "builds": [
-    {
-      "src": "**",
-      "use": "@vercel/static"
     }
   ]
 }
