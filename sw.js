@@ -1,7 +1,7 @@
 // Service Worker para Syspim Market Multi-Tenant
 // Cache offline y notificaciones PWA
 
-const CACHE_NAME = 'syspim-market-v1';
+const CACHE_NAME = 'syspim-market-v2';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -37,22 +37,27 @@ self.addEventListener('activate', event => {
             );
         })
     );
+    self.skipWaiting();
     self.clients.claim();
 });
 
 self.addEventListener('fetch', event => {
-    // Cache First con Network Fallback
+    // Network First con Cache Fallback para garantizar siempre código actualizado en Vercel
     if (event.request.method !== 'GET') return;
 
     event.respondWith(
-        caches.match(event.request).then(cachedResponse => {
-            if (cachedResponse) {
-                return cachedResponse;
+        fetch(event.request).then(networkResponse => {
+            // Actualizar caché en segundo plano
+            if (networkResponse && networkResponse.status === 200) {
+                const responseClone = networkResponse.clone();
+                caches.open(CACHE_NAME).then(cache => {
+                    cache.put(event.request, responseClone);
+                });
             }
-            return fetch(event.request).then(networkResponse => {
-                return networkResponse;
-            }).catch(() => {
-                return caches.match('./index.html');
+            return networkResponse;
+        }).catch(() => {
+            return caches.match(event.request).then(cachedResponse => {
+                return cachedResponse || caches.match('./index.html');
             });
         })
     );

@@ -70,6 +70,13 @@
 
 ## 📜 4. HISTORIAL DE ACTUALIZACIONES (CHANGELOG)
 
+### **[2026-07-26] - Sincronización Vercel / Localhost, Estrategia Anti-Caché & Favicon Assets**
+* **Sincronización & Caché Vercel (vercel.json, index.html & sw.js):**
+  1. Configuración de cabeceras anti-caché HTTP (`no-cache, no-store, must-revalidate`) en `vercel.json` y meta-tags en `index.html` para erradicar el desfasamiento ("divorcio") entre `localhost:3000` y las vistas desplegadas en Vercel CDN.
+  2. Actualización del Service Worker (`sw.js`) a la versión `syspim-market-v2` pasando de *Cache-First* a estrategia **Network-First** con fallback a caché, garantizando descarga inmediata de las últimas actualizaciones de `src/app.js`.
+  3. Limpieza de clases de `<body>` e `<html>` en `index.html` eliminando clases obsoletas de tema oscuro (`dark`, `bg-[#040a07]`) para alineación perfecta con el sistema de diseño claro *Clean Light Retail*.
+  4. Creación del asset oficial `public/favicon.svg` (icono vectorial Cyan Retail `#0284C7`) y fallback `public/favicon.ico`, eliminando errores 404 en la consola del navegador.
+
 ### **[2026-07-26] - Rediseño POS 2 Columnas & Catálogo Delivery GO**
 * **POS Cajero (src/app.js & admin.js):**
   1. Reestructuración completa a la arquitectura de 2 columnas de SyspimFarma (70% Detalle Venta / 30% Resumen Cobro).
