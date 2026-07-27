@@ -1446,40 +1446,39 @@ function App() {
   const handleCheckout = () => {
     if (cart.length === 0) return;
 
-    // 1. Re-validar stock contra localStorage para evitar existencias negativas por concurrencia
-    let currentProds = productos;
-    try {
-      const localP = localStorage.getItem('syspim_productos_list');
-      if (localP) currentProds = JSON.parse(localP);
-    } catch (e) {}
-
+    // 1. Validar stock disponible
     for (const item of cart) {
-      const p = currentProds.find(prod => String(prod.id) === String(item.id) || (prod.nombre || '').toLowerCase().trim() === (item.nombre || '').toLowerCase().trim());
+      const p = productos.find(prod => String(prod.id) === String(item.id) || (prod.nombre || '').toLowerCase().trim() === (item.nombre || '').toLowerCase().trim());
       if (p && (p.stock || 0) < item.qty) {
         showToast(`⚠️ No hay suficiente stock para "${item.nombre}". Stock: ${p.stock || 0}`);
         return;
       }
     }
 
-    // 2. Descontar inventario
-    const updatedProductos = currentProds.map(prod => {
-      const cartItem = cart.find(item => String(item.id) === String(prod.id) || (item.nombre || '').toLowerCase().trim() === (prod.nombre || '').toLowerCase().trim());
-      if (cartItem) {
-        const newStock = Math.max(0, (prod.stock || 0) - cartItem.qty);
-        return { ...prod, stock: newStock, tenant_id: prod.tenant_id || 't-001' };
-      }
-      return { ...prod, tenant_id: prod.tenant_id || 't-001' };
+    // 2. Descontar inventario de forma reactiva y atómica
+    let updatedProductos = [];
+    setProductos(prevProds => {
+      updatedProductos = prevProds.map(prod => {
+        const cartItem = cart.find(item => String(item.id) === String(prod.id) || (item.nombre || '').toLowerCase().trim() === (prod.nombre || '').toLowerCase().trim());
+        if (cartItem) {
+          const newStock = Math.max(0, (prod.stock || 0) - cartItem.qty);
+          return { ...prod, stock: newStock, tenant_id: prod.tenant_id || 't-001' };
+        }
+        return { ...prod, tenant_id: prod.tenant_id || 't-001' };
+      });
+
+      // Persistir en localStorage
+      try {
+        localStorage.setItem('syspim_productos_list', JSON.stringify(updatedProductos));
+      } catch (e) {}
+
+      // Notificar a otras pestañas/ventanas PWA vía BroadcastChannel
+      try {
+        notifyStockUpdate(updatedProductos);
+      } catch (e) {}
+
+      return updatedProductos;
     });
-
-    setProductos(updatedProductos);
-    try {
-      localStorage.setItem('syspim_productos_list', JSON.stringify(updatedProductos));
-    } catch (e) {}
-
-    // Notificar por BroadcastChannel
-    try {
-      notifyStockUpdate(updatedProductos);
-    } catch (e) {}
 
     const recVal = Number(cashReceived) || cartTotal;
     const changeVal = Math.max(0, recVal - cartTotal);
