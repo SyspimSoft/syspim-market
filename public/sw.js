@@ -43,7 +43,6 @@ self.addEventListener('fetch', event => {
 
     event.respondWith(
         fetch(event.request).then(networkResponse => {
-            // Actualizar caché en segundo plano
             if (networkResponse && networkResponse.status === 200) {
                 const responseClone = networkResponse.clone();
                 caches.open(CACHE_NAME).then(cache => {
