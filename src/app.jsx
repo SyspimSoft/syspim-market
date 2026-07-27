@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { notifyStockUpdate } from './utils/broadcast.js';
+import { applyInventoryDiscount } from './utils/helpers.js';
 
 // --- DATOS DEMO DE COLMADOS MULTI-TENANT ---
 const DEMO_TENANTS = [
@@ -1455,17 +1456,10 @@ function App() {
       }
     }
 
-    // 2. Descontar inventario de forma reactiva y atómica
+    // 2. Descontar inventario de forma reactiva y atómica mediante la función pura applyInventoryDiscount
     let updatedProductos = [];
     setProductos(prevProds => {
-      updatedProductos = prevProds.map(prod => {
-        const cartItem = cart.find(item => String(item.id) === String(prod.id) || (item.nombre || '').toLowerCase().trim() === (prod.nombre || '').toLowerCase().trim());
-        if (cartItem) {
-          const newStock = Math.max(0, (prod.stock || 0) - cartItem.qty);
-          return { ...prod, stock: newStock, tenant_id: prod.tenant_id || 't-001' };
-        }
-        return { ...prod, tenant_id: prod.tenant_id || 't-001' };
-      });
+      updatedProductos = applyInventoryDiscount(prevProds, cart);
 
       // Persistir en localStorage
       try {

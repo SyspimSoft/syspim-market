@@ -129,6 +129,46 @@ function shareCatalogToClientWhatsApp(phoneOverride) {
 window.copyCustomerLink = copyCustomerLink;
 window.shareCatalogToClientWhatsApp = shareCatalogToClientWhatsApp;
 
+/**
+ * Función Pura: Descuenta existencias de inventario creando nuevos objetos inmutables
+ * @param {Array} productosList Arreglo actual de productos
+ * @param {Array} cartItems Arreglo de items a descontar ({ id, cantidad/qty, nombre })
+ * @returns {Array} Nuevo arreglo inmutable de productos actualizados
+ */
+export function applyInventoryDiscount(productosList, cartItems) {
+  if (!Array.isArray(productosList) || !Array.isArray(cartItems) || cartItems.length === 0) {
+    return productosList;
+  }
+  return productosList.map(prod => {
+    const item = cartItems.find(i => 
+      (i.id && String(i.id) === String(prod.id)) || 
+      ((i.nombre || '').toLowerCase().trim() === (prod.nombre || '').toLowerCase().trim())
+    );
+    if (!item) {
+      return { ...prod, tenant_id: prod.tenant_id || 't-001' };
+    }
+    const discountQty = Number(item.qty || item.cantidad || 1);
+    const newStock = Math.max(0, (prod.stock || 0) - discountQty);
+    return {
+      ...prod,
+      stock: newStock,
+      tenant_id: prod.tenant_id || 't-001'
+    };
+  });
+}
+
+// Exportar funciones globales para compatibilidad
+if (typeof window !== 'undefined') {
+    window.formatRD$ = formatRD$;
+    window.generateDeliveryToken = generateDeliveryToken;
+    window.slugify = slugify;
+    window.statusBadge = statusBadge;
+    window.formatDate = formatDate;
+    window.buildWhatsAppLink = buildWhatsAppLink;
+    window.copyCustomerLink = copyCustomerLink;
+    window.applyInventoryDiscount = applyInventoryDiscount;
+}
+
 // Exportar globalmente para disponibilidad en scripts vanilla JS
 window.Helpers = {
     formatRD$,
@@ -138,5 +178,6 @@ window.Helpers = {
     formatDate,
     buildWhatsAppLink,
     copyCustomerLink,
-    shareCatalogToClientWhatsApp
+    shareCatalogToClientWhatsApp,
+    applyInventoryDiscount
 };
