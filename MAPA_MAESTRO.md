@@ -81,7 +81,7 @@
   7. Impresión térmica optimizada en tickets de 80mm sin imágenes.
 * **Catálogo Digital PWA (catalog.html):**
   1. Transformación visual al estilo Delivery GO / Instacart / Bravo App con degradados, ubicación e insignias.
-  2. Fijación adhesiva de la barra de búsqueda y categorías (`sticky top-0 z-30`).
+  2. **Header Adhesivo Unificado Fijo (`sticky top-0 z-40`):** Integra el nombre del colmado, la dirección de envío, la **Barra de Búsqueda con Lupa 🔍** y las pestañas de categorías dentro de un solo bloque fijo en la parte superior. La barra de búsqueda permanece 100% visible sin ocultarse al desplazarse en celular.
   3. Rediseño del catálogo en **Carruseles Horizontales Seccionados por Categoría** con desplazamiento táctil `scroll-snap-x mandatory`, encabezados con botón "Ver todos" y tarjetas de producto de ancho fijo (145px - 170px) con botón flotante `+`.
   4. Implementación del Carrito Flotante Inferior Expandible (Bottom Cart Sheet) que muestra los productos guardados con controles de incremento/decremento (`-` / `+`).
 * **Imágenes de Inventario:**

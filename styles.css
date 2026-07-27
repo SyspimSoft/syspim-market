@@ -41,10 +41,8 @@ html, body {
   color: var(--text-main) !important;
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   min-height: 100vh;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow-x: clip;
   scroll-behavior: smooth;
-  position: relative;
   letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
 }
