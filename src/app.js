@@ -811,6 +811,126 @@ const catalogoProductos = [
     categoria: "Frutas y Vegetales",
     imagen: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?auto=format&fit=crop&w=400&q=80",
     stock: 20
+  },
+  {
+    id: "prod_081",
+    tenant_id: "t-001",
+    nombre: "Arroz Selecto (por Lb / RD$)",
+    precio: 40,
+    precioAnterior: null,
+    categoria: "Víveres y Granos",
+    es_detalle: true,
+    unidad_medida: "lb",
+    imagen: "https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=400&q=80",
+    stock: 500
+  },
+  {
+    id: "prod_082",
+    tenant_id: "t-001",
+    nombre: "Habichuela Roja Criolla (por Lb / RD$)",
+    precio: 65,
+    precioAnterior: null,
+    categoria: "Víveres y Granos",
+    es_detalle: true,
+    unidad_medida: "lb",
+    imagen: "https://images.unsplash.com/photo-1551462147-37885acc36f1?auto=format&fit=crop&w=400&q=80",
+    stock: 300
+  },
+  {
+    id: "prod_083",
+    tenant_id: "t-001",
+    nombre: "Carne de Res Fresca (por Lb / RD$)",
+    precio: 195,
+    precioAnterior: null,
+    categoria: "Embutidos",
+    es_detalle: true,
+    unidad_medida: "lb",
+    imagen: "https://images.unsplash.com/photo-1603048588665-791ca8aea617?auto=format&fit=crop&w=400&q=80",
+    stock: 150
+  },
+  {
+    id: "prod_084",
+    tenant_id: "t-001",
+    nombre: "Carne de Pollo Fresco (por Lb / RD$)",
+    precio: 85,
+    precioAnterior: null,
+    categoria: "Embutidos",
+    es_detalle: true,
+    unidad_medida: "lb",
+    imagen: "https://images.unsplash.com/photo-1587593810167-a84920ea0781?auto=format&fit=crop&w=400&q=80",
+    stock: 200
+  },
+  {
+    id: "prod_085",
+    tenant_id: "t-001",
+    nombre: "Plátano Verde Criollo (por Unid / RD$)",
+    precio: 18,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    es_detalle: true,
+    unidad_medida: "unid",
+    imagen: "https://images.unsplash.com/photo-1528825871115-3581a5387919?auto=format&fit=crop&w=400&q=80",
+    stock: 400
+  },
+  {
+    id: "prod_086",
+    tenant_id: "t-001",
+    nombre: "Guineo Verde (por Unid / RD$)",
+    precio: 6,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    es_detalle: true,
+    unidad_medida: "unid",
+    imagen: "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?auto=format&fit=crop&w=400&q=80",
+    stock: 600
+  },
+  {
+    id: "prod_087",
+    tenant_id: "t-001",
+    nombre: "Yuca Criolla (por Lb / RD$)",
+    precio: 30,
+    precioAnterior: null,
+    categoria: "Frutas y Vegetales",
+    es_detalle: true,
+    unidad_medida: "lb",
+    imagen: "https://images.unsplash.com/photo-1590779033100-9f60a05a013d?auto=format&fit=crop&w=400&q=80",
+    stock: 250
+  },
+  {
+    id: "prod_088",
+    tenant_id: "t-001",
+    nombre: "Salami Induveca Super Especial (por Lb / RD$)",
+    precio: 160,
+    precioAnterior: null,
+    categoria: "Embutidos",
+    es_detalle: true,
+    unidad_medida: "lb",
+    imagen: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=400&q=80",
+    stock: 100
+  },
+  {
+    id: "prod_089",
+    tenant_id: "t-001",
+    nombre: "Queso de Hoja / Cheddar (por Lb / RD$)",
+    precio: 240,
+    precioAnterior: null,
+    categoria: "Lácteos",
+    es_detalle: true,
+    unidad_medida: "lb",
+    imagen: "https://images.unsplash.com/photo-1452195100486-9cc805987862?auto=format&fit=crop&w=400&q=80",
+    stock: 80
+  },
+  {
+    id: "prod_090",
+    tenant_id: "t-001",
+    nombre: "Sal Molida Refinada (por Lb / RD$)",
+    precio: 20,
+    precioAnterior: null,
+    categoria: "Víveres y Granos",
+    es_detalle: true,
+    unidad_medida: "lb",
+    imagen: "https://images.unsplash.com/photo-1518110165401-447e8c37edaa?auto=format&fit=crop&w=400&q=80",
+    stock: 300
   }
 ];
 

@@ -79,11 +79,12 @@
   5. Desplazamiento automático al agregar productos (antiguos suben, nuevo aparece abajo).
   6. Desplegable de búsqueda ampliado con alta legibilidad y eliminación de recortes en la primera letra.
   7. Impresión térmica optimizada en tickets de 80mm sin imágenes.
-* **Catálogo Digital PWA (catalog.html):**
+* **Catálogo Digital PWA (catalog.html & src/app.js):**
   1. Transformación visual al estilo Delivery GO / Instacart / Bravo App con degradados, ubicación e insignias.
   2. **Header Adhesivo Unificado Fijo (`sticky top-0 z-40`):** Integra el nombre del colmado, la dirección de envío, la **Barra de Búsqueda con Lupa 🔍** y las pestañas de categorías dentro de un solo bloque fijo en la parte superior. La barra de búsqueda permanece 100% visible sin ocultarse al desplazarse en celular.
   3. Rediseño del catálogo en **Carruseles Horizontales Seccionados por Categoría** con desplazamiento táctil `scroll-snap-x mandatory`, encabezados con botón "Ver todos" y tarjetas de producto de ancho fijo (145px - 170px) con botón flotante `+`.
-  4. Implementación del Carrito Flotante Inferior Expandible (Bottom Cart Sheet) que muestra los productos guardados con controles de incremento/decremento (`-` / `+`).
+  4. **Venta al Detalle (Por Libras / Monto en RD$ / Unidades sueltas):** Módulo `DetailProductModal` para productos de colmado como Arroz, Carnes (Res, Pollo, Cerdo), Habichuelas, Víveres (Plátano, Guineo, Yuca), Sal, Salami y Queso. El cliente puede seleccionar entre **💵 Por Monto en Pesos** (ej. RD$ 50, RD$ 100, RD$ 200, RD$ 500) o **⚖️ Por Peso / Unidades** (ej. 0.5 lb, 1 lb, 2.5 lbs o 5, 10, 20 unid) con cálculo automático en tiempo real.
+  5. Implementación del Carrito Flotante Inferior Expandible (Bottom Cart Sheet) que muestra los productos guardados con controles de incremento/decremento (`-` / `+`).
 * **Imágenes de Inventario:**
   1. Generación de imágenes oficiales de producto para *Rica Leche Listamilk Lt* y *Rica Leche Descremada Lt*.
   2. Integración de 45+ productos agrícolas a la categoría *Frutas y Vegetales*.
