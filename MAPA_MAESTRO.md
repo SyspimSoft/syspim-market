@@ -79,11 +79,12 @@
   5. Desplazamiento automático al agregar productos (antiguos suben, nuevo aparece abajo).
   6. Desplegable de búsqueda ampliado con alta legibilidad y eliminación de recortes en la primera letra.
   7. Impresión térmica optimizada en tickets de 80mm sin imágenes.
-* **Catálogo Digital PWA (catalog.html):**
+* **Catálogo Digital PWA (catalog.html & styles.css):**
   1. Transformación visual al estilo Delivery GO / Instacart / Bravo App con degradados, ubicación e insignias.
-  2. Fijación adhesiva de la barra de búsqueda y categorías (`sticky top-0 z-30`).
-  3. Rediseño del catálogo en **Carruseles Horizontales Seccionados por Categoría** con desplazamiento táctil `scroll-snap-x mandatory`, encabezados con botón "Ver todos" y tarjetas de producto de ancho fijo (145px - 170px) con botón flotante `+`.
-  4. Implementación del Carrito Flotante Inferior Expandible (Bottom Cart Sheet) que muestra los productos guardados con controles de incremento/decremento (`-` / `+`).
+  2. Capas de encabezados adhesivos (Sticky Layering): `.app-header` (`position: sticky; top: 0; z-index: 100;`) y `.category-filter-bar` (`position: sticky; top: 136px; z-index: 90; backdrop-filter: blur;`).
+  3. Aislamiento estricto de carruseles horizontales (`.horizontal-carousel`): `display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden; touch-action: pan-x; scroll-snap-type: x mandatory;`.
+  4. Rediseño del catálogo en **Carruseles Horizontales Seccionados por Categoría** (`.category-section` con `scroll-margin-top: 190px`) con desplazamiento táctil sin superposiciones y transición suave JS `scrollIntoView({ behavior: 'smooth' })`.
+  5. Implementación del Carrito Flotante Inferior Expandible (Bottom Cart Sheet) que muestra los productos guardados con controles de incremento/decremento (`-` / `+`).
 * **Imágenes de Inventario:**
   1. Generación de imágenes oficiales de producto para *Rica Leche Listamilk Lt* y *Rica Leche Descremada Lt*.
   2. Integración de 45+ productos agrícolas a la categoría *Frutas y Vegetales*.

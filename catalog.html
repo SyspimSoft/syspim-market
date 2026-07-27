@@ -394,8 +394,8 @@
               </div>
             )}
 
-            {/* HEADER ESTILO DELIVERY GO / SYSPIM MARKET */}
-            <header className="bg-gradient-to-r from-[#0284C7] to-[#0369A1] text-white px-4 lg:px-8 pt-4 pb-6 sticky top-0 z-30 shadow-md">
+            {/* HEADER ESTILO DELIVERY GO / SYSPIM MARKET (Z-INDEX 100 INAMOVIBLE) */}
+            <header className="app-header bg-gradient-to-r from-[#0284C7] to-[#0369A1] text-white px-4 lg:px-8 pt-4 pb-4 sticky top-0 z-[100] shadow-md">
               <div className="max-w-4xl mx-auto space-y-3">
                 
                 {/* FILA 1: LOGO, MARCA Y BOTONES DE NOTIFICACIÓN / PERFIL */}
@@ -462,11 +462,11 @@
             </header>
 
             {/* CONTENIDO PRINCIPAL DEL CATÁLOGO */}
-            <main className="max-w-4xl mx-auto w-full px-4 py-5 flex-1 space-y-6 pb-40">
+            <main className="max-w-4xl mx-auto w-full px-4 py-4 flex-1 space-y-6 pb-40">
               
-              {/* CHIPS SELECCIÓN DE CATEGORÍAS */}
-              <div>
-                <span className="text-xs font-extrabold text-[#64748B] block mb-2">
+              {/* CHIPS SELECCIÓN DE CATEGORÍAS (BARRA ADHESIVA DE FILTRADO Z-INDEX 90) */}
+              <div className="category-filter-bar sticky top-[138px] z-[90] bg-[#F8FAFC]/96 backdrop-blur-md py-2 px-4 border-b border-[#E2E8F0] shadow-sm -mx-4 sm:-mx-8 sm:px-8">
+                <span className="text-[11px] font-extrabold text-[#64748B] block mb-1.5">
                   Categorías Disponibles ({filteredProducts.length} prods):
                 </span>
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
@@ -479,8 +479,18 @@
                     return (
                       <button
                         key={cat.id}
-                        onClick={() => setSelectedCategory(cat.id)}
-                        className={`px-4 py-2 rounded-2xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all border ${
+                        onClick={() => {
+                          setSelectedCategory(cat.id);
+                          if (cat.id !== 'todos') {
+                            setTimeout(() => {
+                              const target = document.getElementById(`cat-section-${cat.id}`);
+                              if (target) {
+                                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                              }
+                            }, 50);
+                          }
+                        }}
+                        className={`px-4 py-1.5 rounded-2xl text-xs font-bold flex items-center gap-2 whitespace-nowrap transition-all border ${
                           isActive
                             ? 'bg-[#E0F2FE] text-[#0284C7] border-[#0284C7] shadow-sm font-extrabold scale-105'
                             : 'bg-white text-[#64748B] border-[#E2E8F0] hover:bg-[#F1F5F9] hover:text-[#0F172A]'
@@ -497,17 +507,15 @@
                 </div>
               </div>
 
-              {/* SECCIONES DE CARRUSELES HORIZONTALES POR CATEGORÍA (ESTILO INSTACART / BRAVO APP) */}
+              {/* SECCIONES DE CARRUSELES HORIZONTALES POR CATEGORÍA */}
               <div className="space-y-7">
                 {(() => {
-                  // Determinar las secciones a mostrar
                   let sectionsToShow = CATEGORIAS.filter(c => c.id !== 'todos');
                   if (selectedCategory !== 'todos') {
                     sectionsToShow = CATEGORIAS.filter(c => c.id === selectedCategory);
                   }
 
                   if (searchQuery.trim().length > 0) {
-                    // Si el usuario está buscando, mostrar grilla filtrada
                     return (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
@@ -531,7 +539,7 @@
                               return (
                                 <div 
                                   key={product.id}
-                                  className="bg-white border border-[#E2E8F0] p-3 rounded-[20px] shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex flex-col justify-between transition-all hover:shadow-md hover:border-[#BAE6FD] relative group"
+                                  className="product-card bg-white border border-[#E2E8F0] p-3 rounded-[20px] shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex flex-col justify-between transition-all hover:shadow-md hover:border-[#BAE6FD] relative group"
                                 >
                                   <div className="w-full h-28 bg-[#F8FAFC] rounded-xl overflow-hidden mb-2 flex items-center justify-center p-2 border border-[#F1F5F9]">
                                     <img src={product.imagen} alt={product.nombre} className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform" />
@@ -575,7 +583,7 @@
                     if (categoryProducts.length === 0) return null;
 
                     return (
-                      <section key={cat.id} className="space-y-3 animate-fade-in-up">
+                      <section key={cat.id} id={`cat-section-${cat.id}`} className="category-section space-y-3 animate-fade-in-up">
                         
                         {/* ENCABEZADO DE SECCIÓN: TÍTULO Y BOTÓN "VER TODOS" */}
                         <div className="flex items-center justify-between">
@@ -587,7 +595,13 @@
 
                           {selectedCategory === 'todos' && (
                             <button
-                              onClick={() => setSelectedCategory(cat.id)}
+                              onClick={() => {
+                                setSelectedCategory(cat.id);
+                                setTimeout(() => {
+                                  const target = document.getElementById(`cat-section-${cat.id}`);
+                                  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }, 50);
+                              }}
                               className="text-xs font-bold text-[#0284C7] hover:text-[#0369A1] flex items-center gap-1 hover:underline"
                             >
                               <span>Ver todos</span>
@@ -596,8 +610,8 @@
                           )}
                         </div>
 
-                        {/* LISTADO EN CARRUSEL HORIZONTAL CON SCROLL SWIPEABLE (SNAP-X MANDATORY) */}
-                        <div className="flex gap-3.5 overflow-x-auto scroll-snap-x mandatory scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:-mx-8 sm:px-8">
+                        {/* LISTADO EN CARRUSEL HORIZONTAL AISLADO CON SCROLL SWIPEABLE (SNAP-X MANDATORY) */}
+                        <div className="horizontal-carousel flex gap-3.5 overflow-x-auto scroll-snap-x mandatory scrollbar-none pb-2 pt-1 -mx-4 px-4 sm:-mx-8 sm:px-8">
                           {categoryProducts.map(product => {
                             const pricePrev = product.precioAnterior;
                             const itemInCart = cart.find(i => i.id === product.id);
@@ -605,7 +619,7 @@
                             return (
                               <div 
                                 key={product.id}
-                                className="w-[145px] sm:w-[170px] flex-shrink-0 scroll-snap-align-start bg-white border border-[#E2E8F0] p-3 rounded-[20px] shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex flex-col justify-between transition-all hover:shadow-md hover:border-[#BAE6FD] relative group select-none"
+                                className="product-card w-[150px] sm:w-[170px] flex-shrink-0 scroll-snap-align-start bg-white border border-[#E2E8F0] p-3 rounded-[20px] shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex flex-col justify-between transition-all hover:shadow-md hover:border-[#BAE6FD] relative group select-none"
                               >
                                 {/* CONTENEDOR DE IMAGEN ASPECTO 1:1 CON OBJECT-CONTAIN */}
                                 <div className="w-full h-28 sm:h-32 bg-[#F8FAFC] rounded-xl overflow-hidden mb-2 flex items-center justify-center p-2 border border-[#F1F5F9]">
