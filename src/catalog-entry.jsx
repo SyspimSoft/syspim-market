@@ -110,7 +110,40 @@ import '../styles.css';
       ];
 
       function StandaloneCustomerCatalog() {
-        const [products, setProducts] = useState(PRODUCTOS_INICIALES);
+        const [products, setProducts] = useState(() => {
+          try {
+            const saved = localStorage.getItem('syspim_productos_list');
+            if (saved) return JSON.parse(saved);
+          } catch (e) {}
+          return PRODUCTOS_INICIALES;
+        });
+
+        // Escuchador en tiempo real para sincronización cruzada de inventario (BroadcastChannel + storage event)
+        useEffect(() => {
+          const handleStorageChange = (e) => {
+            if (e.key === 'syspim_productos_list' && e.newValue) {
+              try {
+                setProducts(JSON.parse(e.newValue));
+              } catch (err) {}
+            }
+          };
+
+          let broadcast;
+          try {
+            broadcast = new BroadcastChannel('syspim_orders_channel');
+            broadcast.onmessage = (event) => {
+              if (event.data && event.data.type === 'STOCK_UPDATE' && event.data.payload) {
+                setProducts(event.data.payload);
+              }
+            };
+          } catch (e) {}
+
+          window.addEventListener('storage', handleStorageChange);
+          return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            if (broadcast) broadcast.close();
+          };
+        }, []);
         const [searchQuery, setSearchQuery] = useState('');
         const [selectedCategory, setSelectedCategory] = useState('todos');
         const [cart, setCart] = useState([]);
@@ -171,6 +204,10 @@ import '../styles.css';
         };
 
         const addToCart = (product) => {
+          if ((product.stock || 0) <= 0) {
+            showToast('⚠️ Producto agotado');
+            return;
+          }
           if (isBulkItem(product)) {
             setSelectedDetailProduct(product);
             setDetailMontoVal('100');
@@ -181,6 +218,10 @@ import '../styles.css';
           setCart(prev => {
             const existing = prev.find(item => item.id === product.id);
             if (existing) {
+              if (existing.qty >= product.stock) {
+                showToast(`⚠️ Stock máximo alcanzado (${product.stock} dispon.)`);
+                return prev;
+              }
               return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
             }
             return [...prev, { ...product, qty: 1 }];
@@ -257,6 +298,48 @@ import '../styles.css';
             alert('⚠️ Por favor completa tu nombre, teléfono y dirección.');
             return;
           }
+
+          if (cart.length === 0) {
+            alert('⚠️ Tu carrito está vacío.');
+            return;
+          }
+
+          // Re-validación de concurrencia y descuento seguro de inventario
+          let currentProducts = products;
+          try {
+            const latestLocal = localStorage.getItem('syspim_productos_list');
+            if (latestLocal) currentProducts = JSON.parse(latestLocal);
+          } catch (e) {}
+
+          for (const item of cart) {
+            const p = currentProducts.find(prod => prod.id === item.id || (prod.nombre || '').toLowerCase() === (item.nombre || '').toLowerCase());
+            if (p && (p.stock || 0) < item.qty) {
+              alert(`⚠️ No hay suficiente stock disponible para "${item.nombre}". Stock actual: ${p.stock || 0}`);
+              return;
+            }
+          }
+
+          // Descontar existencias
+          const updatedProducts = currentProducts.map(prod => {
+            const cartItem = cart.find(i => i.id === prod.id || (i.nombre || '').toLowerCase() === (prod.nombre || '').toLowerCase());
+            if (cartItem) {
+              const newStock = Math.max(0, (prod.stock || 0) - cartItem.qty);
+              return { ...prod, stock: newStock };
+            }
+            return prod;
+          });
+
+          // Actualizar estado local, localStorage y difundir evento de stock por BroadcastChannel
+          setProducts(updatedProducts);
+          try {
+            localStorage.setItem('syspim_productos_list', JSON.stringify(updatedProducts));
+          } catch (e) {}
+
+          try {
+            const bc = new BroadcastChannel('syspim_orders_channel');
+            bc.postMessage({ type: 'STOCK_UPDATE', payload: updatedProducts });
+            bc.close();
+          } catch (e) {}
 
           // Guardar perfil para futuros pedidos si se marcó la casilla
           if (saveForFuture) {

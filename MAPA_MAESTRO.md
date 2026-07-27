@@ -1,6 +1,6 @@
 # 🗺️ MAPA MAESTRO DE ARQUITECTURA & HISTORIAL DE ACTUALIZACIONES
 > **PROYECTO:** SYSPIM MARKET (SaaS Multi-Tenant de Colmados, Minimarkets & Delivery)  
-> **FECHA DE ÚLTIMA ACTUALIZACIÓN:** 2026-07-26  
+> **FECHA DE ÚLTIMA ACTUALIZACIÓN:** 2026-07-27  
 > **ESTADO DEL PROYECTO:** En Producción / Totalmente Funcional
 
 ---
@@ -69,6 +69,19 @@
 ---
 
 ## 📜 4. HISTORIAL DE ACTUALIZACIONES (CHANGELOG)
+
+### **[2026-07-27] - Deducción de Inventario Realtime (POS & Catálogo PWA) e Integración de Clientes**
+* **Deducción de Inventario en Ventas POS & Pedidos PWA (`src/app.jsx` & `src/catalog-entry.jsx`):**
+  1. **Descuento de Stock Automático:** Cada venta cobrada en la caja del POS y cada pedido generado desde el catálogo del cliente (`catalog.html`) resta automáticamente las existencias en `syspim_productos_list`.
+  2. **Prevención de Concurrencia:** Re-validación del stock actual en `localStorage` antes de ejecutar checkout o envío para evitar existencias negativas por compras simultáneas.
+  3. **Sincronización Realtime Cruzada (`src/utils/broadcast.js`):** Integración de `BroadcastChannel('syspim_orders_channel')` y escuchadores `storage` para actualizar las existencias en tiempo real en todas las pestañas/ventanas abiertas sin recarga.
+  4. **Ajuste Manual de Inventario:** Botones `+` y `-` en la tabla de inventario del POS para reabastecimiento o ajustes rápidos de stock.
+* **Directorio de Clientes e Historial de Pedidos:**
+  1. **Registro Automático de Clientes:** Actualización o registro automático de clientes (nombre, teléfono, dirección, compras acumuladas `totalComprado`, conteo de pedidos) al procesar ventas en POS o pedidos PWA.
+  2. **Historial de Ventas por Cliente:** Modal desglosado para consultar todas las compras hechas por un cliente en específico.
+  3. **WhatsApp Directo PWA:** Botón para enviar el catálogo web con mensaje personalizado directamente al WhatsApp del cliente (`wa.me`).
+* **Compilación y Producción:**
+  1. Compilación exitosa con Vite (`npm run build` en 3.00s) generando todos los assets en `dist/`.
 
 ### **[2026-07-26] - Migración Arquitectónica a Bundled App & Despliegue Producción Vercel**
 * **Compilación & Despliegue en Producción Vercel (https://syspim-market-six.vercel.app):**

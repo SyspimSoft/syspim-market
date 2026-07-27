@@ -974,7 +974,47 @@ function App() {
     }
     return 't-001';
   });
-  const [productos, setProductos] = useState(catalogoProductos);
+  const [productos, setProductos] = useState(() => {
+    try {
+      const saved = localStorage.getItem('syspim_productos_list');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return catalogoProductos;
+  });
+
+  // Guardar productos en localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('syspim_productos_list', JSON.stringify(productos));
+    } catch (e) {}
+  }, [productos]);
+
+  // Escuchar cambios de inventario en tiempo real (storage event + BroadcastChannel)
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'syspim_productos_list' && e.newValue) {
+        try {
+          setProductos(JSON.parse(e.newValue));
+        } catch (err) {}
+      }
+    };
+
+    let broadcast;
+    try {
+      broadcast = new BroadcastChannel('syspim_orders_channel');
+      broadcast.onmessage = (event) => {
+        if (event.data && event.data.type === 'STOCK_UPDATE' && event.data.payload) {
+          setProductos(event.data.payload);
+        }
+      };
+    } catch (e) {}
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      if (broadcast) broadcast.close();
+    };
+  }, []);
   const [activeTab, setActiveTab] = useState(() => {
     if (window.location.hash.includes('orders')) return 'orders';
     if (window.location.hash.includes('inventory')) return 'inventory';
@@ -1384,13 +1424,53 @@ function App() {
   const handleCheckout = () => {
     if (cart.length === 0) return;
 
+    // 1. Re-validar stock contra localStorage para evitar existencias negativas por concurrencia
+    let currentProds = productos;
+    try {
+      const localP = localStorage.getItem('syspim_productos_list');
+      if (localP) currentProds = JSON.parse(localP);
+    } catch (e) {}
+
+    for (const item of cart) {
+      const p = currentProds.find(prod => prod.id === item.id || (prod.nombre || '').toLowerCase() === (item.nombre || '').toLowerCase());
+      if (p && (p.stock || 0) < item.qty) {
+        showToast(`⚠️ No hay suficiente stock para "${item.nombre}". Stock: ${p.stock || 0}`);
+        return;
+      }
+    }
+
+    // 2. Descontar inventario
+    const updatedProductos = currentProds.map(prod => {
+      const cartItem = cart.find(item => item.id === prod.id || (item.nombre || '').toLowerCase() === (prod.nombre || '').toLowerCase());
+      if (cartItem) {
+        const newStock = Math.max(0, (prod.stock || 0) - cartItem.qty);
+        return { ...prod, stock: newStock };
+      }
+      return prod;
+    });
+
+    setProductos(updatedProductos);
+    try {
+      localStorage.setItem('syspim_productos_list', JSON.stringify(updatedProductos));
+    } catch (e) {}
+
+    // Notificar por BroadcastChannel
+    try {
+      const bc = new BroadcastChannel('syspim_orders_channel');
+      bc.postMessage({ type: 'STOCK_UPDATE', payload: updatedProductos });
+      bc.close();
+    } catch (e) {}
+
     const recVal = Number(cashReceived) || cartTotal;
     const changeVal = Math.max(0, recVal - cartTotal);
+
+    const clientObj = CLIENTES.find(c => c.id === selectedCustomer) || clientesList.find(c => c.id === selectedCustomer);
+    const clientName = clientObj?.nombre || 'Consumidor Final';
 
     const receipt = {
       id: `REC-${Math.floor(1000 + Math.random() * 9000)}`,
       fecha: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      cliente: CLIENTES.find(c => c.id === selectedCustomer)?.nombre || 'Consumidor Final',
+      cliente: clientName,
       metodo: paymentMethod.toUpperCase(),
       items: [...cart],
       total: cartTotal,
@@ -1400,12 +1480,49 @@ function App() {
       rnc: ncfRequired ? (rncNumber || '131-88995-2') : null
     };
 
+    // 3. Registrar venta en el listado de pedidos para historial
+    const newPosOrder = {
+      id: receipt.id,
+      cliente_nombre: clientName,
+      cliente_telefono: clientObj?.telefono || 'Caja POS Local',
+      direccion_entrega: 'Venta Directa en Caja POS',
+      monto_total: cartTotal,
+      metodo_pago: paymentMethod.toUpperCase(),
+      estado: 'completado',
+      status: 'completado',
+      created_at: new Date().toISOString(),
+      detalles: cart.map(i => ({ cantidad: i.qty, nombre: i.nombre, precio_unitario: i.precio }))
+    };
+
+    setPedidos(prev => [newPosOrder, ...prev]);
+
+    // 4. Actualizar cliente en clientesList si fue seleccionado
+    if (selectedCustomer && selectedCustomer !== 'consumidor_final') {
+      setClientesList(prevList => {
+        const updatedList = prevList.map(c => {
+          if (c.id === selectedCustomer || c.nombre.toLowerCase().trim() === clientName.toLowerCase().trim()) {
+            return {
+              ...c,
+              pedidosCount: (c.pedidosCount || 0) + 1,
+              totalComprado: (c.totalComprado || 0) + cartTotal,
+              ultimoPedido: 'Hoy'
+            };
+          }
+          return c;
+        });
+        try {
+          localStorage.setItem('syspim_clientes_list', JSON.stringify(updatedList));
+        } catch (e) {}
+        return updatedList;
+      });
+    }
+
     setCheckoutResult(receipt);
     setCart([]);
     setCashReceived('');
     setNcfRequired(false);
     setRncNumber('');
-    showToast('🎉 ¡Venta procesada con éxito!');
+    showToast('🎉 ¡Venta procesada y stock descontado con éxito!');
   };
 
   const showToast = (msg) => {
@@ -2002,8 +2119,58 @@ function App() {
                             {p.categoria}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 text-[#0284C7] font-bold">RD$ {p.precio}</td>
-                        <td className="py-3.5 px-4 text-[#0F172A] font-semibold">{p.stock} unid</td>
+                        <td className="py-3.5 px-4 font-bold text-[#0284C7] font-mono-tabular">RD$ {p.precio.toFixed(2)}</td>
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-2">
+                            <span className={`font-extrabold px-2.5 py-0.5 rounded-lg border text-xs ${
+                              p.stock <= 5 ? 'bg-[#FEE2E2] text-[#DC2626] border-[#FECACA]' : 'bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]'
+                            }`}>
+                              {p.stock} unid.
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => {
+                                  const newStock = Math.max(0, p.stock - 1);
+                                  setProductos(prev => {
+                                    const updated = prev.map(item => item.id === p.id ? { ...item, stock: newStock } : item);
+                                    try { localStorage.setItem('syspim_productos_list', JSON.stringify(updated)); } catch(e){}
+                                    try {
+                                      const bc = new BroadcastChannel('syspim_orders_channel');
+                                      bc.postMessage({ type: 'STOCK_UPDATE', payload: updated });
+                                      bc.close();
+                                    } catch(e){}
+                                    return updated;
+                                  });
+                                  showToast(`📉 Stock de ${p.nombre} ajustado a ${newStock}`);
+                                }}
+                                className="w-6 h-6 rounded-md bg-[#F1F5F9] hover:bg-[#E2E8F0] text-[#0F172A] font-extrabold text-xs flex items-center justify-center border border-[#CBD5E1]"
+                                title="Restar 1 unidad de stock"
+                              >
+                                -
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const newStock = p.stock + 1;
+                                  setProductos(prev => {
+                                    const updated = prev.map(item => item.id === p.id ? { ...item, stock: newStock } : item);
+                                    try { localStorage.setItem('syspim_productos_list', JSON.stringify(updated)); } catch(e){}
+                                    try {
+                                      const bc = new BroadcastChannel('syspim_orders_channel');
+                                      bc.postMessage({ type: 'STOCK_UPDATE', payload: updated });
+                                      bc.close();
+                                    } catch(e){}
+                                    return updated;
+                                  });
+                                  showToast(`📈 Stock de ${p.nombre} aumentado a ${newStock}`);
+                                }}
+                                className="w-6 h-6 rounded-md bg-[#E0F2FE] hover:bg-[#BAE6FD] text-[#0284C7] font-extrabold text-xs flex items-center justify-center border border-[#BAE6FD]"
+                                title="Sumar 1 unidad de stock"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
