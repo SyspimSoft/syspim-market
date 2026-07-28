@@ -37,12 +37,16 @@ export function HeaderNav({
           </div>
         </div>
 
-        {/* NAVEGACIÓN MÓDULOS POS TENANT */}
+        {/* NAVEGACIÓN MÓDULOS POS Y ERP TENANT */}
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
           {[
+            { id: 'dashboard', icon: '🏠', label: 'Dashboard' },
             { id: 'pos', icon: '🛒', label: 'POS (Caja)' },
             { id: 'inventory', icon: '📦', label: `Inventario (${tenantProductsCount})` },
             { id: 'orders', icon: '📋', label: `Pedidos (${pedidosCount})` },
+            { id: 'cash-drawer', icon: '💰', label: 'Caja' },
+            { id: 'delivery-control', icon: '🚚', label: 'Control Delivery' },
+            { id: 'reports', icon: '📊', label: 'Reportes' },
             { id: 'customers', icon: '👥', label: `Clientes (${clientesCount})` }
           ].map(m => (
             <button

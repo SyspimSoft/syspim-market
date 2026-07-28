@@ -193,6 +193,21 @@ sequenceDiagram
 
 ## 📜 4. HISTORIAL DE ACTUALIZACIONES (CHANGELOG)
 
+### **[2026-07-28] - Syspim Market v3.0: Núcleo ERP, Delivery Ledger TX-XXXX & Pruebas Unitarias ERP**
+* **Servicios Contable-Financieros y ERP (`src/services/`):**
+  1. **`financialService.js`:** Cálculo de Ganancia Bruta (Ventas - Costos Estimados), Progreso del Objetivo Diario de Ventas (82% de RD$ 70,000) y Tendencias Comparadas (vs. Ayer ▲ +18%, vs. Semana ▼ -4%, vs. Mes ▲ +11%).
+  2. **`analyticsService.js`:** Picos horarios de venta, ticket promedio, **Pronóstico de Agotamiento de Stock** (días/horas) y **Centro de Alertas Priorizadas** (🔴 Críticas, 🟡 Advertencias, 🔵 Información).
+  3. **`cashControlService.js`:** **Delivery Ledger estilo Banco (`TX-001245`)** y Arqueo de Repartidores con 4 Estados (`✔ CUADRADO`, `⚠️ FALTANTE`, `➕ SOBRANTE`, `❌ PENDIENTE`).
+  4. **`transactionService.js`:** Orquestador transaccional end-to-end (Factura + Caja + Inventario + Kardex + Realtime).
+  5. **Contexto Empresarial Extendido:** Firma de llamada `{ tenantId, userId, branchId }` preparada para expansión multi-sucursales.
+* **Componentes UI ERP & Centro de Control (`src/components/Dashboard/`):**
+  1. **`DashboardOverview.jsx`:** Dashboard Ejecutivo Nivel 1 con KPIs, meta diaria con barra de progreso, tendencias comparativas y centro de alertas operativas.
+  2. **`CashDrawerModule.jsx`:** Módulo Nivel 2 de Caja (Aperturas, Egresos/Retiros e Ingresos).
+  3. **`DeliveryLedgerModule.jsx`:** Control Nivel 2 de Delivery con saldo en la calle, historial bancario `TX-XXXX` y conciliación de turnos.
+  4. **`ReportsModule.jsx`:** Módulo Nivel 2 de Reportes y exportación en formato CSV.
+* **Suite de Pruebas Unitarias ERP (`tests/erpServices.test.js`):**
+  1. **Pruebas Automatizadas (10/10 Pasadas al 100%):** Pruebas unitarias de inventario + ERP ejecutadas con `npm run test`.
+
 ### **[2026-07-28] - Syspim Market v2.0: Modularización POS, Auditoría Kardex & Suite de Pruebas Unitarias**
 * **Modularización Arquitectónica de Componentes (`src/components/POS/`):**
   1. **`HeaderNav.jsx`:** Encabezado unificado de 1 sola fila con control de modulos, estado Online y botón de auditoría Kardex.

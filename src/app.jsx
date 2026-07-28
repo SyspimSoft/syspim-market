@@ -10,6 +10,10 @@ import { CartTable } from './components/POS/CartTable.jsx';
 import { PaymentPanel } from './components/POS/PaymentPanel.jsx';
 import { ShortcutBar } from './components/POS/ShortcutBar.jsx';
 import { KardexModal } from './components/POS/KardexModal.jsx';
+import { DashboardOverview } from './components/Dashboard/DashboardOverview.jsx';
+import { CashDrawerModule } from './components/Dashboard/CashDrawerModule.jsx';
+import { DeliveryLedgerModule } from './components/Dashboard/DeliveryLedgerModule.jsx';
+import { ReportsModule } from './components/Dashboard/ReportsModule.jsx';
 
 // --- DATOS DEMO DE COLMADOS MULTI-TENANT ---
 const DEMO_TENANTS = [
@@ -1026,7 +1030,8 @@ function App() {
   const [activeTab, setActiveTab] = useState(() => {
     if (window.location.hash.includes('orders')) return 'orders';
     if (window.location.hash.includes('inventory')) return 'inventory';
-    return 'pos';
+    if (window.location.hash.includes('pos')) return 'pos';
+    return 'dashboard';
   });
 
   // ESTADO REALTIME DE PEDIDOS SOLICITADOS POR CLIENTES
@@ -1611,6 +1616,43 @@ function App() {
 
       {/* 2. MAIN BODY GENERAL LIGHT RETAIL */}
       <main className="max-w-7xl mx-auto w-full px-4 lg:px-8 py-6 flex-1">
+        
+        {/* ================= MODULO GERENCIAL 1: DASHBOARD EJECUTIVO & CENTRO DE CONTROL ================= */}
+        {activeTab === 'dashboard' && (
+          <DashboardOverview
+            productos={productos}
+            pedidos={pedidos}
+            activeTenant={activeTenant}
+            onNavigate={(tab) => setActiveTab(tab)}
+          />
+        )}
+
+        {/* ================= MODULO GERENCIAL 2: CAJA REGISTRADORA & ARQUEO ================= */}
+        {activeTab === 'cash-drawer' && (
+          <CashDrawerModule
+            pedidos={pedidos}
+            onToast={(msg) => setToast(msg)}
+          />
+        )}
+
+        {/* ================= MODULO GERENCIAL 3: CONTROL DE DELIVERY & LIBRO MAYOR ================= */}
+        {activeTab === 'delivery-control' && (
+          <DeliveryLedgerModule
+            pedidos={pedidos}
+            onToast={(msg) => setToast(msg)}
+          />
+        )}
+
+        {/* ================= MODULO GERENCIAL 4: CENTRO DE REPORTES & EXPORTACIÓN ================= */}
+        {activeTab === 'reports' && (
+          <ReportsModule
+            pedidos={pedidos}
+            productos={productos}
+            activeTenant={activeTenant}
+            onToast={(msg) => setToast(msg)}
+          />
+        )}
+
         {/* ================= MODULO 1: TERMINAL DE CAJA DE COBRO (POS MODULAR) ================= */}
         {activeTab === 'pos' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-fade-in-up">
