@@ -70,18 +70,19 @@
 
 ## 📜 4. HISTORIAL DE ACTUALIZACIONES (CHANGELOG)
 
-### **[2026-07-27] - Deducción de Inventario Realtime (POS & Catálogo PWA) e Integración de Clientes**
-* **Deducción de Inventario en Ventas POS & Pedidos PWA (`src/app.jsx` & `src/catalog-entry.jsx`):**
-  1. **Descuento de Stock Automático:** Cada venta cobrada en la caja del POS y cada pedido generado desde el catálogo del cliente (`catalog.html`) resta automáticamente las existencias en `syspim_productos_list`.
-  2. **Prevención de Concurrencia:** Re-validación del stock actual en `localStorage` antes de ejecutar checkout o envío para evitar existencias negativas por compras simultáneas.
-  3. **Sincronización Realtime Cruzada (`src/utils/broadcast.js`):** Integración de `BroadcastChannel('syspim_orders_channel')` y escuchadores `storage` para actualizar las existencias en tiempo real en todas las pestañas/ventanas abiertas sin recarga.
-  4. **Ajuste Manual de Inventario:** Botones `+` y `-` en la tabla de inventario del POS para reabastecimiento o ajustes rápidos de stock.
-* **Directorio de Clientes e Historial de Pedidos:**
-  1. **Registro Automático de Clientes:** Actualización o registro automático de clientes (nombre, teléfono, dirección, compras acumuladas `totalComprado`, conteo de pedidos) al procesar ventas en POS o pedidos PWA.
-  2. **Historial de Ventas por Cliente:** Modal desglosado para consultar todas las compras hechas por un cliente en específico.
-  3. **WhatsApp Directo PWA:** Botón para enviar el catálogo web con mensaje personalizado directamente al WhatsApp del cliente (`wa.me`).
-* **Compilación y Producción:**
-  1. Compilación exitosa con Vite (`npm run build` en 3.00s) generando todos los assets en `dist/`.
+### **[2026-07-27] - Rediseño POS Alta Velocidad (Estilo Square POS), Capa de Dominio InventoryService y Escáner USB**
+* **Capa de Dominio de Inventario (`src/services/inventoryService.js`):**
+  1. **Servicio Desacoplado:** Creación del módulo de dominio `InventoryService` con reglas puras de negocio re-utilizables fuera de componentes React (`applyInventoryDiscount`, `applyInventoryIncrease`, `applyInventoryAdjustment`, `validateInventoryMovement` y `processSale`).
+  2. **Búsqueda Estricta por ID/Barcode:** Identificación prioritaria por `id`/`uuid` y `barcode` eliminando colisiones y falsos positivos por nombres similares en producción.
+  3. **Generación de Registros Kardex:** Función `createInventoryMovementRecord` que registra logs de auditoría de movimientos de inventario (`syspim_kardex_logs`) con stock anterior, stock nuevo, tipo (`VENTA_POS`, `VENTA_PWA`, `AJUSTE`) y timestamp.
+  4. **Validación Numérica Defensiva:** Aserciones estrictas `Number.isFinite()` que garantizan que el stock nunca desborde ni se convierta en `NaN`.
+* **Rediseño UI/UX POS Cajero de Alta Velocidad (`src/app.jsx`):**
+  1. **Header Unificado de 1 Fila:** Combinación del logo, badge de colmado, estado `🟢 Online`, chips de módulos y menú secundario en una sola barra fija (`sticky top-0 z-40`), recuperando 70px de espacio vertical útil para la venta.
+  2. **Buscador Dominante & Modo Escáner USB:** Buscador un 15% más alto con autofocus al entrar a la pantalla del POS. Soporte para lector de código de barras USB con **Beep sonoro de confirmación a 880Hz** mediante Web Audio API y re-enfoque instantáneo en 50ms para escaneo en ráfaga.
+  3. **Venta Rápida 1-Tap (Favoritos):** Al no tener productos en el carrito, se despliega una cuadrícula interactiva de 8 productos frecuentes para vender al instante con 1 solo toque.
+  4. **Jerarquía Cromática & Total A Pagar:** Banner de Total A Pagar con tipografía `text-5xl font-black` en Azul `#0284C7` y Botón `COBRAR RD$ XXX.XX` en Verde Esmeralda `#16A34A` dinámico.
+  5. **Semáforo de Stock de 3 Niveles:** Badges de disponibilidad en autocompletado: 🟢 Stock alto (>10), 🟡 Stock bajo (4-10) y 🔴 Crítico / Sin Existencia (<=3).
+  6. **Barra Footer de Atajos de Teclado:** Atajos clave destacados en la parte inferior del POS (`[F2] Buscar`, `[Enter] Agregar 1ro`, `[F8] Pausar`, `[F9] Recuperar`, `[ESC] Limpiar`).
 
 ### **[2026-07-26] - Migración Arquitectónica a Bundled App & Despliegue Producción Vercel**
 * **Compilación & Despliegue en Producción Vercel (https://syspim-market-six.vercel.app):**

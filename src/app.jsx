@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { notifyStockUpdate } from './utils/broadcast.js';
-import { applyInventoryDiscount } from './utils/helpers.js';
+import { applyInventoryDiscount, validateInventoryMovement, processSale } from './services/inventoryService.js';
 
 // --- DATOS DEMO DE COLMADOS MULTI-TENANT ---
 const DEMO_TENANTS = [
@@ -1153,6 +1153,14 @@ function App() {
 
   const searchInputRef = useRef(null);
 
+  // Auto-focus en el buscador al abrir el POS para escribir/escanear de inmediato sin clic
+  useEffect(() => {
+    if (activeTab === 'pos' && searchInputRef.current) {
+      const timer = setTimeout(() => searchInputRef.current?.focus(), 150);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab]);
+
   // ESCUCHADOR REALTIME CROSS-TAB & SUPABASE PARA NUEVOS PEDIDOS DE CLIENTES
   useEffect(() => {
     const handleNewOrder = (rawOrder) => {
@@ -1447,23 +1455,33 @@ function App() {
   const handleCheckout = () => {
     if (cart.length === 0) return;
 
-    // 1. Validar stock disponible
-    for (const item of cart) {
-      const p = productos.find(prod => String(prod.id) === String(item.id) || (prod.nombre || '').toLowerCase().trim() === (item.nombre || '').toLowerCase().trim());
-      if (p && (p.stock || 0) < item.qty) {
-        showToast(`⚠️ No hay suficiente stock para "${item.nombre}". Stock: ${p.stock || 0}`);
-        return;
-      }
+    // 1. Validar disponibilidad de stock en el dominio de inventario
+    const validation = validateInventoryMovement(productos, cart);
+    if (!validation.valid) {
+      showToast(`⚠️ ${validation.errors[0] || 'Error de validación de inventario'}`);
+      return;
     }
 
-    // 2. Descontar inventario de forma reactiva y atómica mediante la función pura applyInventoryDiscount
+    // 2. Ejecutar transacción de venta en el dominio (descuento inmutable + logs de Kardex)
     let updatedProductos = [];
     setProductos(prevProds => {
-      updatedProductos = applyInventoryDiscount(prevProds, cart);
+      const saleResult = processSale(prevProds, cart, 'VENTA_POS');
+      if (!saleResult.success) {
+        showToast(`⚠️ ${saleResult.errors[0] || 'No se pudo procesar la venta'}`);
+        return prevProds;
+      }
+      updatedProductos = saleResult.updatedProductos;
 
-      // Persistir en localStorage
+      // Persistir lista de productos
       try {
         localStorage.setItem('syspim_productos_list', JSON.stringify(updatedProductos));
+      } catch (e) {}
+
+      // Persistir historial de Kardex para auditoría
+      try {
+        const existingKardex = JSON.parse(localStorage.getItem('syspim_kardex_logs') || '[]');
+        const updatedKardex = [...(saleResult.movementRecords || []), ...existingKardex].slice(0, 250);
+        localStorage.setItem('syspim_kardex_logs', JSON.stringify(updatedKardex));
       } catch (e) {}
 
       // Notificar a otras pestañas/ventanas PWA vía BroadcastChannel
@@ -1560,70 +1578,33 @@ function App() {
         </div>
       )}
 
-      {/* 1. HEADER / TOP NAV LIGHT MINIMAL RETAIL */}
+      {/* 1. HEADER / TOP NAV UNIFICADO Y COMPACTO DE 1 SOLA FILA */}
       {activeTab !== 'catalog' ? (
-        /* HEADER PARA CAJERO / ADMINISTRADOR DEL COLMADO */
-        <header className="bg-[#FFFFFF] border-b border-[#E2E8F0] text-[#0F172A] px-4 lg:px-8 py-3.5 sticky top-0 z-40 shadow-sm">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+        <header className="bg-[#FFFFFF] border-b border-[#E2E8F0] text-[#0F172A] px-4 lg:px-6 py-2.5 sticky top-0 z-40 shadow-sm">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
             
-            {/* BRAND LOGO */}
+            {/* BRAND LOGO & TENANT */}
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-[14px] bg-[#0284C7] flex items-center justify-center text-white font-bold text-xl shadow-md shadow-[#0284C7]/20">
+              <div className="w-8 h-8 rounded-xl bg-[#0284C7] flex items-center justify-center text-white font-bold text-base shadow-sm">
                 🛒
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="font-bold text-xl tracking-tight text-[#0F172A]">
-                    SYSPIM<span className="text-[#0284C7]">MARKET</span>
-                  </h1>
-                  <span className="text-[10px] font-bold tracking-wider bg-[#E0F2FE] text-[#0369A1] border border-[#BAE6FD] px-2.5 py-0.5 rounded-full">
-                    MULTI-TENANT
-                  </span>
-                </div>
-                <p className="text-[11px] text-[#64748B] font-medium">POS • Inventario • Pedidos & Delivery</p>
+              <div className="flex items-center gap-2">
+                <h1 className="font-extrabold text-lg tracking-tight text-[#0F172A]">
+                  SYSPIM<span className="text-[#0284C7]">MARKET</span>
+                </h1>
+                <span className="hidden sm:inline-flex items-center gap-1 bg-[#E0F2FE] text-[#0369A1] border border-[#BAE6FD] px-2.5 py-0.5 rounded-full text-[11px] font-extrabold">
+                  🏪 {activeTenant?.nombre || 'Colmado Don Pedro'}
+                </span>
+                <span className="hidden md:inline-flex items-center gap-1.5 bg-[#DCFCE7] text-[#15803D] border border-[#86EFAC] px-2 py-0.5 rounded-full text-[10px] font-extrabold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E]"></span> Online
+                </span>
               </div>
             </div>
 
-            {/* BADGE DE COLMADO ACTIVO & BOTONES DE COMPARTIR */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 bg-[#E0F2FE] border border-[#BAE6FD] px-3.5 py-1.5 rounded-full text-xs">
-                <span className="text-[#0369A1] font-bold text-[11px]">🏪 COLMADO:</span>
-                <span className="text-[#0284C7] font-extrabold text-xs">{activeTenant?.nombre || 'Colmado Don Pedro'}</span>
-              </div>
-
-              <button 
-                onClick={() => {
-                  const slug = activeTenant?.slug || 'colmado-don-pedro';
-                  const link = `${window.location.origin}${window.location.pathname.replace(/\/index\.html$/, '')}/catalog.html?tenant=${slug}`;
-                  navigator.clipboard?.writeText(link);
-                  setToast('🔗 Enlace del catálogo digital copiado');
-                }} 
-                className="bg-[#F1F5F9] hover:bg-[#E2E8F0] border border-[#CBD5E1] text-[#0F172A] px-3.5 py-1.5 rounded-full text-xs font-bold transition-all"
-              >
-                🔗 Copiar Link
-              </button>
-              <button 
-                onClick={() => setShowSharePwaModal(true)} 
-                className="bg-[#0284C7] hover:bg-[#0369A1] text-white px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-md shadow-[#0284C7]/20 flex items-center gap-1.5"
-              >
-                <span>📲 Enviar a Cliente</span>
-              </button>
-              <button
-                onClick={() => setShowDiagnosticsModal(true)}
-                className="bg-[#DCFCE7] hover:bg-[#BBF7D0] border border-[#86EFAC] text-[#15803D] px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all shadow-sm flex items-center gap-1.5"
-                title="Monitorear conexión y diagnóstico de recepción de pedidos"
-              >
-                <span>🛠️ Diagnóstico</span>
-              </button>
-            </div>
-
-          </div>
-
-          {/* NAVEGACIÓN MÓDULOS POS TENANT */}
-          <div className="max-w-7xl mx-auto mt-3 pt-2.5 border-t border-[#F1F5F9] flex items-center justify-between overflow-x-auto scrollbar-none">
-            <div className="flex items-center gap-2">
+            {/* NAVEGACIÓN MÓDULOS POS TENANT (CHIPS CENTRADOS) */}
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
               {[
-                { id: 'pos', icon: '🛒', label: 'Punto de Venta (POS)' },
+                { id: 'pos', icon: '🛒', label: 'POS (Caja)' },
                 { id: 'inventory', icon: '📦', label: `Inventario (${tenantProducts.length})` },
                 { 
                   id: 'orders', 
@@ -1631,35 +1612,70 @@ function App() {
                   label: `Pedidos (${pedidos.filter(p => {
                     const st = p.estado || p.status || 'pendiente';
                     return st === 'pendiente' || st === 'en_camino' || st === 'despachado';
-                  }).length} activos)` 
+                  }).length})` 
                 },
                 { id: 'customers', icon: '👥', label: `Clientes (${clientesList.length})` }
               ].map(m => (
                 <button
                   key={m.id}
                   onClick={() => setActiveTab(m.id)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 transition-all whitespace-nowrap ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all whitespace-nowrap ${
                     activeTab === m.id
-                      ? 'bg-[#E0F2FE] text-[#0284C7] border border-[#BAE6FD] shadow-sm'
+                      ? 'bg-[#0284C7] text-white shadow-md shadow-[#0284C7]/20'
                       : 'text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9]'
                   }`}
                 >
-                  <span>{m.icon}</span> {m.label}
+                  <span>{m.icon}</span> <span>{m.label}</span>
                 </button>
               ))}
             </div>
 
-            {/* BOTÓN APERTURA PANTALLA CLIENTE INDEPENDIENTE */}
-            <a
-              href={`catalog.html?tenant=${activeTenant?.slug || 'colmado-don-pedro'}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-1.5 rounded-full text-xs font-bold bg-[#E0F2FE] hover:bg-[#0284C7] text-[#0369A1] hover:text-white border border-[#BAE6FD] transition-all flex items-center gap-1.5 shadow-sm whitespace-nowrap"
-              title="Abrir el catálogo digital independiente en una nueva ventana para el cliente"
-            >
-              <span>🛍️ Abrir Pantalla Cliente</span>
-              <span className="text-[10px]">↗</span>
-            </a>
+            {/* ACCIONES SECUNDARIAS & PANTALLA CLIENTE */}
+            <div className="flex items-center gap-2">
+              <a
+                href={`catalog.html?tenant=${activeTenant?.slug || 'colmado-don-pedro'}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-[#E0F2FE] hover:bg-[#BAE6FD] text-[#0369A1] border border-[#BAE6FD] transition-all flex items-center gap-1 shadow-sm whitespace-nowrap"
+                title="Abrir el catálogo digital independiente en una nueva ventana para el cliente"
+              >
+                <span>🛍️ Pantalla Cliente</span>
+                <span className="text-[10px]">↗</span>
+              </a>
+
+              {/* MENÚ SECUNDARIO DESPLEGABLE */}
+              <div className="relative group">
+                <button className="w-8 h-8 rounded-xl bg-[#F8FAFC] hover:bg-[#E2E8F0] border border-[#E2E8F0] text-[#475569] font-bold text-sm flex items-center justify-center transition-colors">
+                  ⋮
+                </button>
+                <div className="absolute right-0 mt-1 w-48 bg-white border border-[#E2E8F0] rounded-xl shadow-xl z-50 hidden group-hover:block divide-y divide-[#F1F5F9] text-xs">
+                  <button 
+                    onClick={() => {
+                      const slug = activeTenant?.slug || 'colmado-don-pedro';
+                      const link = `${window.location.origin}${window.location.pathname.replace(/\/index\.html$/, '')}/catalog.html?tenant=${slug}`;
+                      navigator.clipboard?.writeText(link);
+                      setToast('🔗 Enlace del catálogo copiado');
+                    }}
+                    className="w-full text-left px-3.5 py-2.5 hover:bg-[#F8FAFC] font-semibold text-[#0F172A] flex items-center gap-2"
+                  >
+                    <span>🔗</span> Copiar Link PWA
+                  </button>
+                  <button 
+                    onClick={() => setShowSharePwaModal(true)}
+                    className="w-full text-left px-3.5 py-2.5 hover:bg-[#F8FAFC] font-semibold text-[#0F172A] flex items-center gap-2"
+                  >
+                    <span>📲</span> Enviar WhatsApp
+                  </button>
+                  <button 
+                    onClick={() => setShowDiagnosticsModal(true)}
+                    className="w-full text-left px-3.5 py-2.5 hover:bg-[#F8FAFC] font-semibold text-[#0F172A] flex items-center gap-2"
+                  >
+                    <span>🛠️</span> Diagnóstico
+                  </button>
+                </div>
+              </div>
+            </div>
+
           </div>
         </header>
       ) : null}
@@ -1679,8 +1695,8 @@ function App() {
                   
                   {/* INPUT ESCÁNER BÚSQUEDA */}
                   <div className="relative flex-1 w-full">
-                    <div className="bg-[#F8FAFC] border-2 border-[#E2E8F0] p-3 sm:p-3.5 rounded-2xl shadow-sm flex items-center gap-3 focus-within:border-[#0284C7] focus-within:bg-white transition-all">
-                      <span className="text-2xl text-[#0284C7] ml-2 flex-shrink-0">🔍</span>
+                    <div className="bg-[#F8FAFC] border-2 border-[#CBD5E1] p-3.5 sm:p-4 rounded-2xl shadow-sm flex items-center gap-3 focus-within:border-[#0284C7] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#0284C7]/15 transition-all">
+                      <span className="text-2xl text-[#0284C7] ml-1 flex-shrink-0">🔍</span>
                       <input 
                         ref={searchInputRef}
                         type="text"
@@ -1689,14 +1705,39 @@ function App() {
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
-                            if (filteredProducts.length > 0) {
-                              addToCart(filteredProducts[0]);
+                            const term = searchQuery.trim();
+                            if (!term) return;
+
+                            // Prioridad 1: Coincidencia exacta por ID o Barcode
+                            const exactMatch = tenantProducts.find(p => 
+                              String(p.id).toLowerCase() === term.toLowerCase() || 
+                              (p.barcode && String(p.barcode) === term)
+                            );
+                            const targetProduct = exactMatch || filteredProducts[0];
+
+                            if (targetProduct) {
+                              addToCart(targetProduct);
+                              // Beep sutil de confirmación de escáner USB
+                              try {
+                                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                                const osc = ctx.createOscillator();
+                                const gain = ctx.createGain();
+                                osc.type = 'sine';
+                                osc.frequency.setValueAtTime(880, ctx.currentTime);
+                                gain.gain.setValueAtTime(0.08, ctx.currentTime);
+                                osc.connect(gain);
+                                gain.connect(ctx.destination);
+                                osc.start();
+                                osc.stop(ctx.currentTime + 0.08);
+                              } catch(err) {}
+
                               setSearchQuery('');
+                              setTimeout(() => searchInputRef.current?.focus(), 50);
                             }
                           }
                         }}
-                        placeholder="Busque por nombre o escanee código... (Enter para agregar)"
-                        className="bg-transparent w-full text-[#0F172A] font-extrabold placeholder-[#94A3B8] focus:outline-none text-base sm:text-lg px-2 py-1 font-jakarta leading-normal"
+                        placeholder="Buscar producto o escanear código... [F2]"
+                        className="bg-transparent w-full text-[#0F172A] font-black placeholder-[#94A3B8] focus:outline-none text-lg sm:text-xl px-2 py-1 font-jakarta leading-normal tracking-wide"
                       />
                       {searchQuery && (
                         <button onClick={() => setSearchQuery('')} className="text-sm font-bold text-[#94A3B8] hover:text-[#EF4444] px-2 py-1 transition-colors">
@@ -1741,13 +1782,23 @@ function App() {
                                     <span className="bg-[#F1F5F9] border border-[#E2E8F0] text-[#475569] font-bold px-2.5 py-0.5 rounded-lg">
                                       {p.categoria || 'General'}
                                     </span>
-                                    <span className={`font-mono font-bold px-2.5 py-0.5 rounded-lg border ${
-                                      isLowStock 
-                                        ? 'bg-[#FEE2E2] text-[#DC2626] border-[#FECACA]' 
-                                        : 'bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]'
-                                    }`}>
-                                      Stock: {p.stock} unid.
-                                    </span>
+                                     {p.stock <= 0 ? (
+                                       <span className="font-mono font-extrabold px-2.5 py-0.5 rounded-lg border bg-[#FEE2E2] text-[#DC2626] border-[#FECACA]">
+                                         🔴 SIN EXISTENCIA
+                                       </span>
+                                     ) : p.stock <= 3 ? (
+                                       <span className="font-mono font-extrabold px-2.5 py-0.5 rounded-lg border bg-[#FEE2E2] text-[#DC2626] border-[#FECACA]">
+                                         🔴 Stock crítico: {p.stock} unid.
+                                       </span>
+                                     ) : p.stock <= 10 ? (
+                                       <span className="font-mono font-extrabold px-2.5 py-0.5 rounded-lg border bg-[#FEFCE8] text-[#854D0E] border-[#FEF08A]">
+                                         🟡 Stock bajo: {p.stock} unid.
+                                       </span>
+                                     ) : (
+                                       <span className="font-mono font-extrabold px-2.5 py-0.5 rounded-lg border bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]">
+                                         🟢 Stock: {p.stock} unid.
+                                       </span>
+                                     )}
                                   </div>
                                 </div>
 
@@ -1839,14 +1890,37 @@ function App() {
                   {/* TABLA ALTA LEGIBILIDAD */}
                   <div ref={cartListRef} className="mt-4 overflow-x-auto max-h-[calc(100vh-22rem)] overflow-y-auto border border-[#E2E8F0] rounded-2xl custom-scrollbar shadow-inner">
                     {cart.length === 0 ? (
-                      <div className="py-24 text-center bg-[#F8FAFC] flex flex-col items-center justify-center space-y-2">
-                        <div className="w-16 h-16 rounded-full bg-[#E0F2FE] text-[#0284C7] flex items-center justify-center text-2xl font-bold mb-1">
-                          🛒
+                      <div className="py-8 px-4 bg-[#F8FAFC] flex flex-col items-center justify-center space-y-4 rounded-xl">
+                        <div className="text-center space-y-1">
+                          <span className="text-xs font-extrabold text-[#0284C7] bg-[#E0F2FE] border border-[#BAE6FD] px-3.5 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1 shadow-sm">
+                            ⚡ Venta Rápida 1-Tap
+                          </span>
+                          <p className="font-extrabold text-sm sm:text-base text-[#0F172A] pt-1 font-jakarta">
+                            Selecciona un producto frecuente o busca arriba [F2]
+                          </p>
                         </div>
-                        <p className="font-extrabold text-base text-[#0F172A]">Caja lista para procesar cobro</p>
-                        <p className="text-xs text-[#64748B] max-w-sm">
-                          Escanea el código de barras o escribe el nombre en el buscador superior.
-                        </p>
+
+                        {/* GRID DE FAVORITOS / MÁS VENDIDOS */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full max-w-2xl">
+                          {tenantProducts.slice(0, 8).map(p => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => addToCart(p)}
+                              className="bg-white hover:bg-[#E0F2FE] border border-[#E2E8F0] hover:border-[#0284C7] p-3 rounded-xl text-left shadow-sm transition-all group flex flex-col justify-between active:scale-[0.98]"
+                            >
+                              <span className="font-extrabold text-xs text-[#0F172A] group-hover:text-[#0284C7] line-clamp-2 leading-tight font-jakarta">
+                                {p.nombre}
+                              </span>
+                              <div className="flex items-center justify-between mt-2.5 pt-1.5 border-t border-[#F1F5F9] w-full">
+                                <span className="font-extrabold text-xs text-[#0284C7] font-mono-tabular">RD$ {p.precio}</span>
+                                <span className="text-[10px] font-extrabold bg-[#F1F5F9] text-[#64748B] px-2 py-0.5 rounded-md group-hover:bg-[#0284C7] group-hover:text-white transition-colors">
+                                  + Vender
+                                </span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     ) : (
                       <table className="w-full text-left border-collapse">
@@ -1939,17 +2013,17 @@ function App() {
                   RESUMEN DE COBRO
                 </h3>
 
-                {/* BANNER VERDE GIGANTE DEL TOTAL A PAGAR */}
-                <div className="bg-[#0284C7] text-white p-5 rounded-2xl text-center shadow-lg shadow-[#0284C7]/20 space-y-1">
-                  <span className="text-xs font-extrabold uppercase tracking-widest block opacity-90">
-                    TOTAL A PAGAR RD$
+                {/* BANNER GIGANTE DEL TOTAL A PAGAR */}
+                <div className="bg-[#0284C7] text-white p-5 rounded-2xl text-center shadow-xl shadow-[#0284C7]/20 space-y-1">
+                  <span className="text-[11px] font-extrabold uppercase tracking-widest block opacity-90">
+                    TOTAL A PAGAR
                   </span>
-                  <span className="text-4xl font-extrabold tracking-tight font-jakarta block">
-                    {cartTotal.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <span className="text-4xl sm:text-5xl font-black tracking-tight font-jakarta block leading-none py-1">
+                    RD$ {cartTotal.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                 </div>
 
-                {/* MÉTODO DE PAGO */}
+                {/* MÉTODO DE PAGO EN CHIPS SELECCIONABLES */}
                 <div className="space-y-2">
                   <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] block">
                     Método de Pago
@@ -1965,13 +2039,14 @@ function App() {
                         <button
                           key={m.id}
                           onClick={() => setPaymentMethod(m.id)}
-                          className={`py-3 rounded-xl text-xs font-bold transition-all border flex flex-col items-center justify-center gap-1 ${
+                          className={`py-2.5 px-1.5 rounded-xl text-xs font-extrabold transition-all border flex items-center justify-center gap-1 ${
                             active
-                              ? 'bg-[#E0F2FE] text-[#0284C7] border-[#0284C7] shadow-sm font-extrabold'
+                              ? 'bg-[#E0F2FE] text-[#0284C7] border-[#0284C7] shadow-sm font-black ring-2 ring-[#0284C7]/20'
                               : 'bg-[#F8FAFC] text-[#64748B] border-[#E2E8F0] hover:bg-[#E2E8F0]'
                           }`}
                         >
-                          {m.label}
+                          <span className="text-[10px]">{active ? '●' : '○'}</span>
+                          <span className="truncate">{m.label}</span>
                         </button>
                       );
                     })}
@@ -2047,19 +2122,38 @@ function App() {
                   )}
                 </div>
 
-                {/* BOTON GIGANTE COBRAR E IMPRIMIR */}
+                {/* BOTON GIGANTE COBRAR E IMPRIMIR DINÁMICO (VERDE CONFIRMACIÓN DE ALTO CONTRASTE) */}
                 <button
                   disabled={cart.length === 0}
                   onClick={handleCheckout}
-                  className={`w-full py-4 rounded-2xl font-extrabold text-base tracking-wide flex items-center justify-center gap-2 transition-all ${
+                  className={`w-full py-4 rounded-2xl font-black text-base sm:text-lg tracking-wider flex items-center justify-center gap-2 transition-all ${
                     cart.length === 0
                       ? 'bg-[#F1F5F9] text-[#94A3B8] border border-[#E2E8F0] cursor-not-allowed'
-                      : 'bg-[#0284C7] hover:bg-[#0369A1] text-white shadow-xl shadow-[#0284C7]/25 cursor-pointer active:scale-[0.99]'
+                      : 'bg-[#16A34A] hover:bg-[#15803D] text-white shadow-xl shadow-[#16A34A]/25 cursor-pointer active:scale-[0.98]'
                   }`}
                 >
-                  <span>🧾 COBRAR E IMPRIMIR</span>
+                  <span>🧾</span>
+                  <span>
+                    {cart.length === 0 
+                      ? 'COBRAR E IMPRIMIR' 
+                      : `COBRAR RD$ ${cartTotal.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  </span>
                 </button>
 
+              </div>
+            </div>
+
+            {/* BANDA INFERIOR DE ATAJOS DE TECLADO RÁPIDOS */}
+            <div className="lg:col-span-12 bg-white border border-[#E2E8F0] px-5 py-3 rounded-2xl shadow-sm flex items-center justify-between text-xs text-[#64748B] flex-wrap gap-3 font-mono">
+              <div className="flex items-center gap-4 flex-wrap font-bold">
+                <span className="flex items-center gap-1.5"><kbd className="bg-[#F1F5F9] border border-[#CBD5E1] px-2 py-0.5 rounded text-[10px] text-[#0F172A] shadow-xs">F2</kbd> Buscar</span>
+                <span className="flex items-center gap-1.5"><kbd className="bg-[#F1F5F9] border border-[#CBD5E1] px-2 py-0.5 rounded text-[10px] text-[#0F172A] shadow-xs">Enter</kbd> Agregar 1ro</span>
+                <span className="flex items-center gap-1.5"><kbd className="bg-[#FEFCE8] border border-[#FEF08A] px-2 py-0.5 rounded text-[10px] text-[#854D0E] shadow-xs">F8</kbd> Pausar</span>
+                <span className="flex items-center gap-1.5"><kbd className="bg-[#E0F2FE] border border-[#BAE6FD] px-2 py-0.5 rounded text-[10px] text-[#0369A1] shadow-xs">F9</kbd> Recuperar</span>
+                <span className="flex items-center gap-1.5"><kbd className="bg-[#FEE2E2] border border-[#FECACA] px-2 py-0.5 rounded text-[10px] text-[#DC2626] shadow-xs">ESC</kbd> Limpiar</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px] font-sans font-extrabold text-[#0284C7]">
+                <span>⚡ Modo POS Sin Ratón Activo</span>
               </div>
             </div>
 
