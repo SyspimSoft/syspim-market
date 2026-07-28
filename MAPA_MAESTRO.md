@@ -70,6 +70,19 @@
 
 ## 📜 4. HISTORIAL DE ACTUALIZACIONES (CHANGELOG)
 
+### **[2026-07-28] - Syspim Market v2.0: Modularización POS, Auditoría Kardex & Suite de Pruebas Unitarias**
+* **Modularización Arquitectónica de Componentes (`src/components/POS/`):**
+  1. **`HeaderNav.jsx`:** Encabezado unificado de 1 sola fila con control de modulos, estado Online y botón de auditoría Kardex.
+  2. **`SearchBar.jsx`:** Buscador estilo Square POS con autoFocus, beep de escáner USB a 880Hz y autocompletado con semáforo de 3 niveles.
+  3. **`CartTable.jsx`:** Detalle de venta con botones atómicos de cantidad y cuadrícula **⚡ Venta Rápida 1-Tap (8 Favoritos)** para carritos vacíos.
+  4. **`PaymentPanel.jsx`:** Total A Pagar en números gigantes (Azul `#0284C7`), chips de método de pago, devuelta y Botón Cobrar dinámico (Verde `#16A34A`).
+  5. **`ShortcutBar.jsx`:** Banda inferior de atajos de teclado (`F2`, `Enter`, `F8`, `F9`, `ESC`).
+  6. **`KardexModal.jsx`:** Modal visual e interactivo de auditoría para buscar, filtrar y examinar los logs de `syspim_kardex_logs`.
+* **Suite de Pruebas Unitarias (`tests/inventoryService.test.js`):**
+  1. **Pruebas Automatizadas (6/6 Pasadas al 100%):** Validación de existencias, descuentos inmutables, prevención de stock negativo, logs Kardex y orquestador `processSale`.
+  2. **Script `npm run test`:** Añadido a `package.json` para ejecución automatizada en Node.js ESM.
+* **Orquestación en `src/app.jsx`:** Refactorización masiva importando los submódulos especializados de `src/components/POS/`.
+
 ### **[2026-07-27] - Rediseño POS Alta Velocidad (Estilo Square POS), Capa de Dominio InventoryService y Escáner USB**
 * **Capa de Dominio de Inventario (`src/services/inventoryService.js`):**
   1. **Servicio Desacoplado:** Creación del módulo de dominio `InventoryService` con reglas puras de negocio re-utilizables fuera de componentes React (`applyInventoryDiscount`, `applyInventoryIncrease`, `applyInventoryAdjustment`, `validateInventoryMovement` y `processSale`).

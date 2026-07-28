@@ -4,6 +4,12 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { notifyStockUpdate } from './utils/broadcast.js';
 import { applyInventoryDiscount, validateInventoryMovement, processSale } from './services/inventoryService.js';
+import { HeaderNav } from './components/POS/HeaderNav.jsx';
+import { SearchBar } from './components/POS/SearchBar.jsx';
+import { CartTable } from './components/POS/CartTable.jsx';
+import { PaymentPanel } from './components/POS/PaymentPanel.jsx';
+import { ShortcutBar } from './components/POS/ShortcutBar.jsx';
+import { KardexModal } from './components/POS/KardexModal.jsx';
 
 // --- DATOS DEMO DE COLMADOS MULTI-TENANT ---
 const DEMO_TENANTS = [
@@ -1146,6 +1152,7 @@ function App() {
   const [viewCustomerHistory, setViewCustomerHistory] = useState(null);
   const [viewOrderDetails, setViewOrderDetails] = useState(null);
   const [showDiagnosticsModal, setShowDiagnosticsModal] = useState(false);
+  const [showKardexModal, setShowKardexModal] = useState(false);
 
   // Modales & Toast
   const [checkoutResult, setCheckoutResult] = useState(null);
@@ -1578,584 +1585,82 @@ function App() {
         </div>
       )}
 
-      {/* 1. HEADER / TOP NAV UNIFICADO Y COMPACTO DE 1 SOLA FILA */}
-      {activeTab !== 'catalog' ? (
-        <header className="bg-[#FFFFFF] border-b border-[#E2E8F0] text-[#0F172A] px-4 lg:px-6 py-2.5 sticky top-0 z-40 shadow-sm">
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
-            
-            {/* BRAND LOGO & TENANT */}
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-[#0284C7] flex items-center justify-center text-white font-bold text-base shadow-sm">
-                🛒
-              </div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-extrabold text-lg tracking-tight text-[#0F172A]">
-                  SYSPIM<span className="text-[#0284C7]">MARKET</span>
-                </h1>
-                <span className="hidden sm:inline-flex items-center gap-1 bg-[#E0F2FE] text-[#0369A1] border border-[#BAE6FD] px-2.5 py-0.5 rounded-full text-[11px] font-extrabold">
-                  🏪 {activeTenant?.nombre || 'Colmado Don Pedro'}
-                </span>
-                <span className="hidden md:inline-flex items-center gap-1.5 bg-[#DCFCE7] text-[#15803D] border border-[#86EFAC] px-2 py-0.5 rounded-full text-[10px] font-extrabold">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E]"></span> Online
-                </span>
-              </div>
-            </div>
-
-            {/* NAVEGACIÓN MÓDULOS POS TENANT (CHIPS CENTRADOS) */}
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-              {[
-                { id: 'pos', icon: '🛒', label: 'POS (Caja)' },
-                { id: 'inventory', icon: '📦', label: `Inventario (${tenantProducts.length})` },
-                { 
-                  id: 'orders', 
-                  icon: '📋', 
-                  label: `Pedidos (${pedidos.filter(p => {
-                    const st = p.estado || p.status || 'pendiente';
-                    return st === 'pendiente' || st === 'en_camino' || st === 'despachado';
-                  }).length})` 
-                },
-                { id: 'customers', icon: '👥', label: `Clientes (${clientesList.length})` }
-              ].map(m => (
-                <button
-                  key={m.id}
-                  onClick={() => setActiveTab(m.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all whitespace-nowrap ${
-                    activeTab === m.id
-                      ? 'bg-[#0284C7] text-white shadow-md shadow-[#0284C7]/20'
-                      : 'text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9]'
-                  }`}
-                >
-                  <span>{m.icon}</span> <span>{m.label}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* ACCIONES SECUNDARIAS & PANTALLA CLIENTE */}
-            <div className="flex items-center gap-2">
-              <a
-                href={`catalog.html?tenant=${activeTenant?.slug || 'colmado-don-pedro'}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-[#E0F2FE] hover:bg-[#BAE6FD] text-[#0369A1] border border-[#BAE6FD] transition-all flex items-center gap-1 shadow-sm whitespace-nowrap"
-                title="Abrir el catálogo digital independiente en una nueva ventana para el cliente"
-              >
-                <span>🛍️ Pantalla Cliente</span>
-                <span className="text-[10px]">↗</span>
-              </a>
-
-              {/* MENÚ SECUNDARIO DESPLEGABLE */}
-              <div className="relative group">
-                <button className="w-8 h-8 rounded-xl bg-[#F8FAFC] hover:bg-[#E2E8F0] border border-[#E2E8F0] text-[#475569] font-bold text-sm flex items-center justify-center transition-colors">
-                  ⋮
-                </button>
-                <div className="absolute right-0 mt-1 w-48 bg-white border border-[#E2E8F0] rounded-xl shadow-xl z-50 hidden group-hover:block divide-y divide-[#F1F5F9] text-xs">
-                  <button 
-                    onClick={() => {
-                      const slug = activeTenant?.slug || 'colmado-don-pedro';
-                      const link = `${window.location.origin}${window.location.pathname.replace(/\/index\.html$/, '')}/catalog.html?tenant=${slug}`;
-                      navigator.clipboard?.writeText(link);
-                      setToast('🔗 Enlace del catálogo copiado');
-                    }}
-                    className="w-full text-left px-3.5 py-2.5 hover:bg-[#F8FAFC] font-semibold text-[#0F172A] flex items-center gap-2"
-                  >
-                    <span>🔗</span> Copiar Link PWA
-                  </button>
-                  <button 
-                    onClick={() => setShowSharePwaModal(true)}
-                    className="w-full text-left px-3.5 py-2.5 hover:bg-[#F8FAFC] font-semibold text-[#0F172A] flex items-center gap-2"
-                  >
-                    <span>📲</span> Enviar WhatsApp
-                  </button>
-                  <button 
-                    onClick={() => setShowDiagnosticsModal(true)}
-                    className="w-full text-left px-3.5 py-2.5 hover:bg-[#F8FAFC] font-semibold text-[#0F172A] flex items-center gap-2"
-                  >
-                    <span>🛠️</span> Diagnóstico
-                  </button>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </header>
-      ) : null}
+      {/* 1. HEADER / TOP NAV UNIFICADO */}
+      {activeTab !== 'catalog' && (
+        <HeaderNav
+          activeTenant={activeTenant}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          tenantProductsCount={tenantProducts.length}
+          pedidosCount={pedidos.filter(p => {
+            const st = p.estado || p.status || 'pendiente';
+            return st === 'pendiente' || st === 'en_camino' || st === 'despachado';
+          }).length}
+          clientesCount={clientesList.length}
+          onCopyCatalogLink={() => {
+            const slug = activeTenant?.slug || 'colmado-don-pedro';
+            const link = `${window.location.origin}${window.location.pathname.replace(/\/index\.html$/, '')}/catalog.html?tenant=${slug}`;
+            navigator.clipboard?.writeText(link);
+            setToast('🔗 Enlace del catálogo copiado');
+          }}
+          onOpenShareModal={() => setShowSharePwaModal(true)}
+          onOpenDiagnosticsModal={() => setShowDiagnosticsModal(true)}
+          onOpenKardexModal={() => setShowKardexModal(true)}
+        />
+      )}
 
       {/* 2. MAIN BODY GENERAL LIGHT RETAIL */}
       <main className="max-w-7xl mx-auto w-full px-4 lg:px-8 py-6 flex-1">
-        {/* ================= MODULO 1: TERMINAL DE CAJA DE COBRO (POS 2 COLUMNAS ESTILO SYSPIM FARMA) ================= */}
+        {/* ================= MODULO 1: TERMINAL DE CAJA DE COBRO (POS MODULAR) ================= */}
         {activeTab === 'pos' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-fade-in-up">
             
-            {/* COLUMNA IZQUIERDA (8 COL / ~70%): BÚSQUEDA Y TABLA DETALLE DE LA VENTA */}
+            {/* COLUMNA IZQUIERDA: BÚSQUEDA Y DETALLE DE VENTA */}
             <div className="lg:col-span-8 flex flex-col space-y-4">
-              
-              {/* CARD BÚSQUEDA / ESCÁNER RÁPIDO & ACCIONES (F8 / F9 / F4) */}
-              <div className="bg-[#FFFFFF] border border-[#E2E8F0] p-4 rounded-[22px] shadow-[0_4px_20px_rgba(0,0,0,0.04)] space-y-3">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                  
-                  {/* INPUT ESCÁNER BÚSQUEDA */}
-                  <div className="relative flex-1 w-full">
-                    <div className="bg-[#F8FAFC] border-2 border-[#CBD5E1] p-3.5 sm:p-4 rounded-2xl shadow-sm flex items-center gap-3 focus-within:border-[#0284C7] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#0284C7]/15 transition-all">
-                      <span className="text-2xl text-[#0284C7] ml-1 flex-shrink-0">🔍</span>
-                      <input 
-                        ref={searchInputRef}
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            const term = searchQuery.trim();
-                            if (!term) return;
+              <SearchBar
+                searchInputRef={searchInputRef}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                filteredProducts={filteredProducts}
+                tenantProducts={tenantProducts}
+                addToCart={addToCart}
+                showToast={(msg) => setToast(msg)}
+              />
 
-                            // Prioridad 1: Coincidencia exacta por ID o Barcode
-                            const exactMatch = tenantProducts.find(p => 
-                              String(p.id).toLowerCase() === term.toLowerCase() || 
-                              (p.barcode && String(p.barcode) === term)
-                            );
-                            const targetProduct = exactMatch || filteredProducts[0];
-
-                            if (targetProduct) {
-                              addToCart(targetProduct);
-                              // Beep sutil de confirmación de escáner USB
-                              try {
-                                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                                const osc = ctx.createOscillator();
-                                const gain = ctx.createGain();
-                                osc.type = 'sine';
-                                osc.frequency.setValueAtTime(880, ctx.currentTime);
-                                gain.gain.setValueAtTime(0.08, ctx.currentTime);
-                                osc.connect(gain);
-                                gain.connect(ctx.destination);
-                                osc.start();
-                                osc.stop(ctx.currentTime + 0.08);
-                              } catch(err) {}
-
-                              setSearchQuery('');
-                              setTimeout(() => searchInputRef.current?.focus(), 50);
-                            }
-                          }
-                        }}
-                        placeholder="Buscar producto o escanear código... [F2]"
-                        className="bg-transparent w-full text-[#0F172A] font-black placeholder-[#94A3B8] focus:outline-none text-lg sm:text-xl px-2 py-1 font-jakarta leading-normal tracking-wide"
-                      />
-                      {searchQuery && (
-                        <button onClick={() => setSearchQuery('')} className="text-sm font-bold text-[#94A3B8] hover:text-[#EF4444] px-2 py-1 transition-colors">
-                          ✕
-                        </button>
-                      )}
-                    </div>
-
-                    {/* RESULTADOS DE AUTOCOMPLETADO RÁPIDO DE ALTA LEGIBILIDAD (WIDE & CRYSTAL CLEAR) */}
-                    {searchQuery.trim().length > 0 && (
-                      <div className="absolute left-0 right-0 top-full mt-2 bg-white border-2 border-[#0284C7] rounded-2xl shadow-[0_16px_40px_rgba(2,132,199,0.15)] z-50 max-h-96 overflow-y-auto divide-y divide-[#F1F5F9] custom-scrollbar">
-                        {filteredProducts.length === 0 ? (
-                          <div className="p-6 text-center text-sm font-bold text-[#64748B] bg-[#F8FAFC]">
-                            ⚠️ No se encontraron productos coincidentes con "{searchQuery}"
-                          </div>
-                        ) : (
-                          filteredProducts.map((p, idx) => {
-                            const isLowStock = p.stock <= 5;
-                            return (
-                              <div
-                                key={p.id}
-                                onClick={() => {
-                                  addToCart(p);
-                                  setSearchQuery('');
-                                }}
-                                className="p-4 sm:p-4.5 hover:bg-[#E0F2FE]/60 active:bg-[#BAE6FD]/60 cursor-pointer flex items-center justify-between gap-4 transition-colors group"
-                              >
-                                {/* INFORMACIÓN DEL PRODUCTO */}
-                                <div className="space-y-1.5 flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-extrabold text-sm sm:text-base text-[#0F172A] font-jakarta group-hover:text-[#0284C7] transition-colors truncate">
-                                      {p.nombre}
-                                    </span>
-                                    {idx === 0 && (
-                                      <span className="bg-[#0284C7] text-white text-[9.5px] font-extrabold uppercase px-2 py-0.5 rounded-md flex-shrink-0">
-                                        Enter (1ro)
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  <div className="flex items-center gap-2 text-xs flex-wrap">
-                                    <span className="bg-[#F1F5F9] border border-[#E2E8F0] text-[#475569] font-bold px-2.5 py-0.5 rounded-lg">
-                                      {p.categoria || 'General'}
-                                    </span>
-                                     {p.stock <= 0 ? (
-                                       <span className="font-mono font-extrabold px-2.5 py-0.5 rounded-lg border bg-[#FEE2E2] text-[#DC2626] border-[#FECACA]">
-                                         🔴 SIN EXISTENCIA
-                                       </span>
-                                     ) : p.stock <= 3 ? (
-                                       <span className="font-mono font-extrabold px-2.5 py-0.5 rounded-lg border bg-[#FEE2E2] text-[#DC2626] border-[#FECACA]">
-                                         🔴 Stock crítico: {p.stock} unid.
-                                       </span>
-                                     ) : p.stock <= 10 ? (
-                                       <span className="font-mono font-extrabold px-2.5 py-0.5 rounded-lg border bg-[#FEFCE8] text-[#854D0E] border-[#FEF08A]">
-                                         🟡 Stock bajo: {p.stock} unid.
-                                       </span>
-                                     ) : (
-                                       <span className="font-mono font-extrabold px-2.5 py-0.5 rounded-lg border bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]">
-                                         🟢 Stock: {p.stock} unid.
-                                       </span>
-                                     )}
-                                  </div>
-                                </div>
-
-                                {/* PRECIO E IMPORTADOR + BOTÓN AGREGAR */}
-                                <div className="flex items-center gap-3.5 flex-shrink-0">
-                                  <div className="text-right">
-                                    <span className="font-extrabold text-base sm:text-lg text-[#0284C7] font-mono-tabular block">
-                                      RD$ {p.precio.toFixed(2)}
-                                    </span>
-                                    {p.precioAnterior && (
-                                      <span className="text-xs text-[#EF4444] line-through font-normal block -mt-0.5 font-mono">
-                                        RD$ {p.precioAnterior}
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  <button
-                                    type="button"
-                                    className="bg-[#0284C7] group-hover:bg-[#0369A1] text-white text-xs font-extrabold px-3.5 py-2 rounded-xl shadow-md shadow-[#0284C7]/20 flex items-center gap-1 transition-all group-hover:scale-105"
-                                  >
-                                    <span>+ Agregar</span>
-                                  </button>
-                                </div>
-
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* BOTONES DE ATATAJOS RÁPIDOS */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => showToast('⏸️ Venta pausada')}
-                      className="px-3 py-2.5 rounded-xl border border-[#FEF08A] bg-[#FEFCE8] text-[#854D0E] font-bold text-xs flex items-center gap-1.5 hover:bg-[#FEF9C3] transition-colors"
-                    >
-                      <span>⏸️</span>
-                      <span className="hidden sm:inline">F8 Pausar</span>
-                    </button>
-                    <button
-                      onClick={() => showToast('▶️ Recuperando venta')}
-                      className="px-3 py-2.5 rounded-xl border border-[#BAE6FD] bg-[#E0F2FE] text-[#0369A1] font-bold text-xs flex items-center gap-1.5 hover:bg-[#BAE6FD] transition-colors"
-                    >
-                      <span>▶️</span>
-                      <span className="hidden sm:inline">F9 Recup.</span>
-                    </button>
-                    {cart.length > 0 && (
-                      <button
-                        onClick={() => setCart([])}
-                        className="px-3 py-2.5 rounded-xl border border-[#FECACA] bg-[#FEE2E2] text-[#DC2626] font-bold text-xs hover:bg-[#FCA5A5] transition-colors"
-                        title="Limpiar Carrito"
-                      >
-                        🗑️ Limpiar
-                      </button>
-                    )}
-                  </div>
-
-                </div>
-              </div>
-
-              {/* CARD DETALLE DE LA VENTA (TABLA DE PRODUCTOS EN CAJA) */}
-              <div className="bg-[#FFFFFF] border border-[#E2E8F0] rounded-[24px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col justify-between flex-1 min-h-[calc(100vh-14rem)]">
-                <div>
-                  <div className="flex items-center justify-between pb-4 border-b border-[#F1F5F9]">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-xl">📋</span>
-                      <h3 className="font-extrabold text-base text-[#0F172A] font-jakarta">Detalle de la Venta</h3>
-                      <span className="bg-[#E0F2FE] text-[#0284C7] font-extrabold text-xs px-2.5 py-0.5 rounded-full">
-                        {cartCount} items
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-extrabold text-[#64748B]">Cliente:</span>
-                      <select
-                        value={selectedCustomer}
-                        onChange={(e) => setSelectedCustomer(e.target.value)}
-                        className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-3 py-1.5 text-xs font-extrabold text-[#0F172A] focus:outline-none"
-                      >
-                        {CLIENTES.map(c => (
-                          <option key={c.id} value={c.id}>{c.nombre}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* TABLA ALTA LEGIBILIDAD */}
-                  <div ref={cartListRef} className="mt-4 overflow-x-auto max-h-[calc(100vh-22rem)] overflow-y-auto border border-[#E2E8F0] rounded-2xl custom-scrollbar shadow-inner">
-                    {cart.length === 0 ? (
-                      <div className="py-8 px-4 bg-[#F8FAFC] flex flex-col items-center justify-center space-y-4 rounded-xl">
-                        <div className="text-center space-y-1">
-                          <span className="text-xs font-extrabold text-[#0284C7] bg-[#E0F2FE] border border-[#BAE6FD] px-3.5 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1 shadow-sm">
-                            ⚡ Venta Rápida 1-Tap
-                          </span>
-                          <p className="font-extrabold text-sm sm:text-base text-[#0F172A] pt-1 font-jakarta">
-                            Selecciona un producto frecuente o busca arriba [F2]
-                          </p>
-                        </div>
-
-                        {/* GRID DE FAVORITOS / MÁS VENDIDOS */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 w-full max-w-2xl">
-                          {tenantProducts.slice(0, 8).map(p => (
-                            <button
-                              key={p.id}
-                              type="button"
-                              onClick={() => addToCart(p)}
-                              className="bg-white hover:bg-[#E0F2FE] border border-[#E2E8F0] hover:border-[#0284C7] p-3 rounded-xl text-left shadow-sm transition-all group flex flex-col justify-between active:scale-[0.98]"
-                            >
-                              <span className="font-extrabold text-xs text-[#0F172A] group-hover:text-[#0284C7] line-clamp-2 leading-tight font-jakarta">
-                                {p.nombre}
-                              </span>
-                              <div className="flex items-center justify-between mt-2.5 pt-1.5 border-t border-[#F1F5F9] w-full">
-                                <span className="font-extrabold text-xs text-[#0284C7] font-mono-tabular">RD$ {p.precio}</span>
-                                <span className="text-[10px] font-extrabold bg-[#F1F5F9] text-[#64748B] px-2 py-0.5 rounded-md group-hover:bg-[#0284C7] group-hover:text-white transition-colors">
-                                  + Vender
-                                </span>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0] text-[#475569] uppercase font-mono tracking-wider text-xs">
-                            <th className="py-3.5 px-4 font-extrabold">PRODUCTO</th>
-                            <th className="py-3.5 px-4 font-extrabold text-center">EA</th>
-                            <th className="py-3.5 px-4 font-extrabold text-center">CANT.</th>
-                            <th className="py-3.5 px-4 font-extrabold text-right">PRECIO</th>
-                            <th className="py-3.5 px-4 font-extrabold text-right">TOTAL</th>
-                            <th className="py-3.5 px-4 font-extrabold text-center"></th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-[#F1F5F9] bg-white">
-                          {cart.map((item) => (
-                            <tr key={item.id} className="hover:bg-[#F0F9FF] transition-colors">
-                              
-                              {/* NOMBRE Y CATEGORIA DEL PRODUCTO */}
-                              <td className="py-4 px-4">
-                                <span className="font-extrabold text-sm sm:text-base text-[#0F172A] font-jakarta block leading-tight">
-                                  {item.nombre}
-                                </span>
-                                <span className="text-[11px] font-bold text-[#0284C7] bg-[#E0F2FE] px-2 py-0.5 rounded-md inline-block mt-1">
-                                  {item.categoria || 'General'}
-                                </span>
-                              </td>
-
-                              {/* STOCK EXISTENCIA (EA) */}
-                              <td className="py-4 px-4 text-center font-mono font-extrabold text-xs text-[#15803D]">
-                                {item.stock || 99}
-                              </td>
-
-                              {/* CANTIDAD */}
-                              <td className="py-4 px-4">
-                                <div className="flex items-center justify-center gap-1.5 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl px-2 py-1 max-w-[100px] mx-auto shadow-sm">
-                                  <button
-                                    onClick={() => updateCartQty(item.id, -1)}
-                                    className="w-5 h-5 rounded-lg flex items-center justify-center text-xs font-extrabold bg-white text-[#0F172A] border border-[#CBD5E1] hover:bg-[#EF4444] hover:text-white transition-colors"
-                                  >
-                                    -
-                                  </button>
-                                  <span className="font-mono text-sm font-extrabold text-[#0F172A] min-w-[20px] text-center">
-                                    {item.qty}
-                                  </span>
-                                  <button
-                                    onClick={() => updateCartQty(item.id, 1)}
-                                    className="w-5 h-5 rounded-lg flex items-center justify-center text-xs font-extrabold bg-white text-[#0F172A] border border-[#CBD5E1] hover:bg-[#0284C7] hover:text-white transition-colors"
-                                  >
-                                    +
-                                  </button>
-                                </div>
-                              </td>
-
-                              {/* PRECIO */}
-                              <td className="py-4 px-4 text-right font-extrabold text-sm sm:text-base text-[#0F172A] font-mono-tabular">
-                                RD$ {item.precio.toFixed(2)}
-                              </td>
-
-                              {/* TOTAL */}
-                              <td className="py-4 px-4 text-right font-extrabold text-sm sm:text-base text-[#0284C7] font-mono-tabular">
-                                RD$ {(item.precio * item.qty).toFixed(2)}
-                              </td>
-
-                              {/* ELIMINAR */}
-                              <td className="py-4 px-4 text-center">
-                                <button
-                                  onClick={() => updateCartQty(item.id, -item.qty)}
-                                  title="Quitar ítem"
-                                  className="w-6 h-6 rounded-full text-[#EF4444] hover:bg-[#FEE2E2] font-bold text-xs inline-flex items-center justify-center transition-colors"
-                                >
-                                  ✕
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                </div>
-              </div>
-
+              <CartTable
+                cart={cart}
+                cartCount={cartCount}
+                cartListRef={cartListRef}
+                selectedCustomer={selectedCustomer}
+                setSelectedCustomer={setSelectedCustomer}
+                clientesList={clientesList}
+                CLIENTES={CLIENTES}
+                updateCartQty={updateCartQty}
+                setCart={setCart}
+                tenantProducts={tenantProducts}
+                addToCart={addToCart}
+              />
             </div>
 
-            {/* COLUMNA DERECHA (4 COL / ~30%): CARD PANEL RESUMEN DE COBRO */}
+            {/* COLUMNA DERECHA: PANEL RESUMEN DE COBRO */}
             <div className="lg:col-span-4 sticky top-20">
-              <div className="bg-[#FFFFFF] border border-[#E2E8F0] rounded-[24px] p-6 shadow-[0_4px_24px_rgba(0,0,0,0.06)] space-y-5">
-                
-                <h3 className="font-extrabold text-base text-[#0F172A] font-jakarta text-center tracking-wide uppercase">
-                  RESUMEN DE COBRO
-                </h3>
-
-                {/* BANNER GIGANTE DEL TOTAL A PAGAR */}
-                <div className="bg-[#0284C7] text-white p-5 rounded-2xl text-center shadow-xl shadow-[#0284C7]/20 space-y-1">
-                  <span className="text-[11px] font-extrabold uppercase tracking-widest block opacity-90">
-                    TOTAL A PAGAR
-                  </span>
-                  <span className="text-4xl sm:text-5xl font-black tracking-tight font-jakarta block leading-none py-1">
-                    RD$ {cartTotal.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </div>
-
-                {/* MÉTODO DE PAGO EN CHIPS SELECCIONABLES */}
-                <div className="space-y-2">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] block">
-                    Método de Pago
-                  </span>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { id: 'efectivo', label: '💵 EFECTIVO' },
-                      { id: 'tarjeta', label: '💳 TARJETA' },
-                      { id: 'transferencia', label: '📲 TRANSFER' }
-                    ].map(m => {
-                      const active = paymentMethod === m.id;
-                      return (
-                        <button
-                          key={m.id}
-                          onClick={() => setPaymentMethod(m.id)}
-                          className={`py-2.5 px-1.5 rounded-xl text-xs font-extrabold transition-all border flex items-center justify-center gap-1 ${
-                            active
-                              ? 'bg-[#E0F2FE] text-[#0284C7] border-[#0284C7] shadow-sm font-black ring-2 ring-[#0284C7]/20'
-                              : 'bg-[#F8FAFC] text-[#64748B] border-[#E2E8F0] hover:bg-[#E2E8F0]'
-                          }`}
-                        >
-                          <span className="text-[10px]">{active ? '●' : '○'}</span>
-                          <span className="truncate">{m.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* CALCULADORA DE EFECTIVO RECIBIDO Y DEVUELTA */}
-                {paymentMethod === 'efectivo' && (
-                  <div className="space-y-3 pt-1">
-                    <div>
-                      <label className="text-[11px] font-extrabold uppercase tracking-wider text-[#0369A1] mb-1 block">
-                        Efectivo Recibido RD$ (F2)
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={cashReceived}
-                          onChange={(e) => setCashReceived(e.target.value)}
-                          placeholder="0.00"
-                          className="w-full bg-[#F8FAFC] border-2 border-[#0284C7] rounded-xl px-4 py-3 text-xl font-extrabold text-[#0F172A] focus:outline-none font-mono-tabular text-center shadow-inner"
-                        />
-                      </div>
-                    </div>
-
-                    {/* DEVUELTA */}
-                    <div className="bg-[#FEFCE8] border border-[#FEF08A] p-3.5 rounded-xl text-center shadow-sm">
-                      <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-[#854D0E] block">
-                        DEVUELTA
-                      </span>
-                      {(() => {
-                        const rec = Number(cashReceived) || 0;
-                        const diff = rec - cartTotal;
-                        if (!cashReceived || rec === 0) {
-                          return <span className="font-extrabold text-2xl text-[#0F172A] font-mono-tabular block">RD$ 0.00</span>;
-                        }
-                        if (diff >= 0) {
-                          return <span className="font-extrabold text-2xl text-[#15803D] font-mono-tabular block">RD$ {diff.toFixed(2)}</span>;
-                        }
-                        return (
-                          <span className="font-extrabold text-xs text-[#DC2626] font-mono-tabular block bg-[#FEE2E2] py-1 px-2 rounded-lg mt-1">
-                            Falta RD$ {Math.abs(diff).toFixed(2)}
-                          </span>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                )}
-
-                {/* CHECKBOX COMPROBANTE FISCAL NCF */}
-                <div className="pt-2 border-t border-[#F1F5F9] space-y-2">
-                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={ncfRequired}
-                      onChange={(e) => setNcfRequired(e.target.checked)}
-                      className="w-4 h-4 text-[#0284C7] rounded border-[#CBD5E1] focus:ring-[#0284C7] cursor-pointer"
-                    />
-                    <span className="text-xs font-extrabold text-[#0F172A] flex items-center gap-1">
-                      <span>🧾</span> ¿Requiere Comprobante Fiscal (RNC)?
-                    </span>
-                  </label>
-
-                  {ncfRequired && (
-                    <div className="pt-1 animate-fade-in-up">
-                      <input
-                        type="text"
-                        value={rncNumber}
-                        onChange={(e) => setRncNumber(e.target.value)}
-                        placeholder="Ingrese RNC o Cédula (Ej: 131-88995-2)..."
-                        className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-3 py-2 text-xs font-extrabold text-[#0F172A] placeholder-[#94A3B8]"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* BOTON GIGANTE COBRAR E IMPRIMIR DINÁMICO (VERDE CONFIRMACIÓN DE ALTO CONTRASTE) */}
-                <button
-                  disabled={cart.length === 0}
-                  onClick={handleCheckout}
-                  className={`w-full py-4 rounded-2xl font-black text-base sm:text-lg tracking-wider flex items-center justify-center gap-2 transition-all ${
-                    cart.length === 0
-                      ? 'bg-[#F1F5F9] text-[#94A3B8] border border-[#E2E8F0] cursor-not-allowed'
-                      : 'bg-[#16A34A] hover:bg-[#15803D] text-white shadow-xl shadow-[#16A34A]/25 cursor-pointer active:scale-[0.98]'
-                  }`}
-                >
-                  <span>🧾</span>
-                  <span>
-                    {cart.length === 0 
-                      ? 'COBRAR E IMPRIMIR' 
-                      : `COBRAR RD$ ${cartTotal.toLocaleString('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                  </span>
-                </button>
-
-              </div>
+              <PaymentPanel
+                cart={cart}
+                cartTotal={cartTotal}
+                paymentMethod={paymentMethod}
+                setPaymentMethod={setPaymentMethod}
+                cashReceived={cashReceived}
+                setCashReceived={setCashReceived}
+                ncfRequired={ncfRequired}
+                setNcfRequired={setNcfRequired}
+                rncNumber={rncNumber}
+                setRncNumber={setRncNumber}
+                handleCheckout={handleCheckout}
+              />
             </div>
 
-            {/* BANDA INFERIOR DE ATAJOS DE TECLADO RÁPIDOS */}
-            <div className="lg:col-span-12 bg-white border border-[#E2E8F0] px-5 py-3 rounded-2xl shadow-sm flex items-center justify-between text-xs text-[#64748B] flex-wrap gap-3 font-mono">
-              <div className="flex items-center gap-4 flex-wrap font-bold">
-                <span className="flex items-center gap-1.5"><kbd className="bg-[#F1F5F9] border border-[#CBD5E1] px-2 py-0.5 rounded text-[10px] text-[#0F172A] shadow-xs">F2</kbd> Buscar</span>
-                <span className="flex items-center gap-1.5"><kbd className="bg-[#F1F5F9] border border-[#CBD5E1] px-2 py-0.5 rounded text-[10px] text-[#0F172A] shadow-xs">Enter</kbd> Agregar 1ro</span>
-                <span className="flex items-center gap-1.5"><kbd className="bg-[#FEFCE8] border border-[#FEF08A] px-2 py-0.5 rounded text-[10px] text-[#854D0E] shadow-xs">F8</kbd> Pausar</span>
-                <span className="flex items-center gap-1.5"><kbd className="bg-[#E0F2FE] border border-[#BAE6FD] px-2 py-0.5 rounded text-[10px] text-[#0369A1] shadow-xs">F9</kbd> Recuperar</span>
-                <span className="flex items-center gap-1.5"><kbd className="bg-[#FEE2E2] border border-[#FECACA] px-2 py-0.5 rounded text-[10px] text-[#DC2626] shadow-xs">ESC</kbd> Limpiar</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-[11px] font-sans font-extrabold text-[#0284C7]">
-                <span>⚡ Modo POS Sin Ratón Activo</span>
-              </div>
-            </div>
+            {/* BANDA INFERIOR DE ATAJOS */}
+            <ShortcutBar />
 
           </div>
         )}
@@ -3360,11 +2865,25 @@ function App() {
               >
                 🖨️ Imprimir Ticket
               </button>
-              <button onClick={() => setCheckoutResult(null)} className="flex-1 bg-[#5B4BFF] hover:bg-[#6D5FFF] text-white font-bold text-xs py-3 rounded-[12px] shadow-lg shadow-[#5B4BFF]/25 transition-all">NUEVA VENTA</button>
+              <button 
+                onClick={() => {
+                  setCheckoutResult(null);
+                  setTimeout(() => searchInputRef.current?.focus(), 100);
+                }} 
+                className="flex-1 bg-[#0284C7] hover:bg-[#0369A1] text-white font-bold text-xs py-3 rounded-[12px] shadow-lg shadow-[#0284C7]/25 transition-all"
+              >
+                NUEVA VENTA
+              </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* MODAL AUDITORÍA KARDEX */}
+      <KardexModal 
+        isOpen={showKardexModal} 
+        onClose={() => setShowKardexModal(false)} 
+      />
 
     </div>
   );
