@@ -11,14 +11,137 @@
 
 ---
 
-## 🏗️ 2. ARQUITECTURA TÉCNICA DEL SISTEMA
+## 🏛️ 2. ARQUITECTURA TÉCNICA DE REFERENCIA
 
 ### **Stack Tecnológico Core:**
-* **Frontend UI:** HTML5 + JavaScript ES6+ + React 18 (in-browser Babel transform para compilación instantánea sin build step complejo).
-* **Estilos & Diseño:** Tailwind CSS (Vanilla utilities + clases CSS personalizadas en `styles.css`).
-* **Base de Datos & Realtime:** Supabase Cloud (Autenticación, tablas `pedidos`, `productos`, `tenants`, `clientes` y canales en tiempo real WebSocket / BroadcastChannel).
-* **Impresión Térmica:** Módulo `AdminModule.acceptAndPrintOrder` configurado para impresoras térmicas de tickets de 80mm en formato de solo texto (oculta imágenes en `@media print`).
-* **PWA & Delivery:** PWA independiente en `catalog.html` optimizada para clientes finales de pedimentos a domicilio.
+* **Frontend UI:** HTML5 + JavaScript ES6+ + React 18 (Compilación nativa empaquetada con Vite).
+* **Estilos & Diseño:** Tailwind CSS local (PostCSS + Autoprefixer + utility classes en `styles.css`).
+* **Base de Datos & Realtime:** Supabase Cloud (Autenticación, tablas `pedidos`, `productos`, `tenants`, `clientes` y canales WebSocket / `BroadcastChannel`).
+* **Capa de Dominio:** Servicios ES6 independientes (`src/services/`) desacoplados de la capa de presentación React.
+* **Impresión Térmica:** Módulo `AdminModule.acceptAndPrintOrder` para impresoras térmicas de 80mm en solo texto.
+* **Pruebas Automatizadas:** Suite de pruebas unitarias en Node.js ESM (`tests/inventoryService.test.js`).
+
+---
+
+### **Diagrama de Arquitectura por Capas:**
+
+```mermaid
+graph TD
+    subgraph Capa 1: Presentación UI (React & MPA)
+        UI1[src/app.jsx - Orquestador POS]
+        UI2[src/components/POS/ - Subcomponentes POS]
+        UI3[catalog.html - PWA Cliente Delivery]
+        UI4[delivery.html - App Repartidores]
+        UI5[superadmin.html - Panel SaaS Admin]
+    end
+
+    subgraph Capa 2: Servicios de Dominio (Pure ES6 Modules)
+        S1[src/services/inventoryService.js]
+        S2[src/utils/broadcast.js - Realtime Sync]
+        S3[src/utils/helpers.js]
+    end
+
+    subgraph Capa 3: Persistencia y Tiempo Real
+        P1[(Supabase Cloud Database)]
+        P2[(LocalStorage - syspim_productos_list)]
+        P3[(LocalStorage - syspim_kardex_logs)]
+        P4[BroadcastChannel - syspim_orders_channel]
+    end
+
+    UI1 --> UI2
+    UI1 --> S1
+    UI3 --> S1
+    UI1 --> S2
+    S1 --> P2
+    S1 --> P3
+    S2 --> P4
+    S1 -. Sincronización .-> P1
+```
+
+---
+
+## 🛡️ 3. PRINCIPIOS FUNDAMENTALES DE DESARROLLO
+
+1. **Desacoplamiento Estricto:** La capa de componentes React **NUNCA contiene reglas de negocio**. Toda la lógica de cálculo, descuento, validación o Kardex debe residir en la capa `src/services/`.
+2. **Inmutabilidad de Datos:** Ninguna función modifica arreglos u objetos existentes. Las operaciones de inventario o estado devuelven copias inmutables creadas con spread operators (`...`).
+3. **Auditoría Obligatoria Kardex:** Todo cambio de existencia en el inventario (ventas POS, compras PWA, reabastecimiento o ajustes) debe generar un registro de movimiento inmutable en `syspim_kardex_logs`.
+4. **Validación Numérica Defensiva:** Antes de aplicar cualquier movimiento, se valida mediante `Number.isFinite()` que las cantidades sean mayores a 0 y no produzcan `NaN` ni desbordamientos.
+5. **Identificación Unívoca en Producción:** La búsqueda y descuento de productos se realiza estrictamente por `id`/`uuid` o `barcode`. Las coincidencias por nombre son el último recurso defensivo.
+6. **Sincronización Transaccional Multi-Pestaña:** Toda mutación de estado local debe ser persistida en `localStorage` e inmediatamente notificada a otras pestañas/ventanas PWA mediante `BroadcastChannel`.
+
+---
+
+## 🔄 4. FLUJO TRANSACCIONAL DE UNA VENTA (`processSale`)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Cajero
+    participant SearchBar as SearchBar.jsx / USB Scanner
+    participant POS as app.jsx / Componentes POS
+    participant Domain as InventoryService.js
+    participant Storage as LocalStorage & BroadcastChannel
+    participant PWA as PWA Pestañas Abiertas
+
+    Cajero->>SearchBar: Escanea Barcode o presiona Enter [F2]
+    SearchBar->>SearchBar: Reproduce Beep Audio (880Hz) & Agrega a Carrito
+    Cajero->>POS: Presiona [COBRAR RD$ XXX.XX]
+    POS->>Domain: validateInventoryMovement(productos, cart)
+    alt Stock Insuficiente
+        Domain-->>POS: { valid: false, errors: [...] }
+        POS-->>Cajero: Muestra Toast error ⚠️
+    else Stock Disponible
+        Domain-->>POS: { valid: true }
+        POS->>Domain: processSale(productos, cart, 'VENTA_POS')
+        Domain->>Domain: applyInventoryDiscount() + createInventoryMovementRecord()
+        Domain-->>POS: { success: true, updatedProductos, movementRecords }
+        POS->>Storage: Guardar syspim_productos_list & syspim_kardex_logs
+        POS->>Storage: Emitir notifyStockUpdate() vía BroadcastChannel
+        Storage-->>PWA: Actualización en tiempo real sin recarga
+        POS->>POS: Limpia Carrito y Enfoca Buscador en 50ms
+        POS-->>Cajero: Muestra Modal Ticket Confirmación ✓
+    end
+```
+
+---
+
+## 📊 5. MATRIZ DE DEPENDENCIAS POR MÓDULO
+
+| Módulo / Vista | Archivo Principal | Componentes / Servicios Requeridos | Responsabilidad |
+| :--- | :--- | :--- | :--- |
+| **POS Terminal** | `src/app.jsx` | `HeaderNav`, `SearchBar`, `CartTable`, `PaymentPanel`, `ShortcutBar`, `KardexModal`, `InventoryService` | Terminal de caja de cobro de alta velocidad sin ratón. |
+| **Catálogo PWA** | `catalog.html` | `catalog-entry.jsx`, `InventoryService`, `broadcast.js` | Pedidos web para clientes a domicilio. |
+| **App Repartidores** | `delivery.html` | `delivery-entry.jsx`, Supabase Realtime | Monitoreo y despacho de envíos. |
+| **SuperAdmin SaaS** | `superadmin.html` | `superadmin.js`, Supabase Auth & Multi-tenant | Gestión de colmados, suscripciones y configuración. |
+| **Servicio Inventario** | `src/services/inventoryService.js` | Módulo ES6 Puro | Dominio central de existencias, reglas Kardex y validaciones. |
+
+---
+
+## 📁 6. CONVENCIONES DE NOMENCLATURA Y ESTRUCTURA DE ARCHIVOS
+
+- **Servicios de Dominio:** Ubicados en `src/services/`, nombrados en `camelCase` finalizados en `Service.js` (Ej. `inventoryService.js`, `orderService.js`).
+- **Componentes React:** Ubicados en `src/components/`, nombrados en `PascalCase` con extensión `.jsx` (Ej. `SearchBar.jsx`, `CartTable.jsx`, `PaymentPanel.jsx`).
+- **Utilidades Generales:** Ubicadas en `src/utils/`, nombradas en `camelCase` con extensión `.js` (Ej. `broadcast.js`, `helpers.js`).
+- **Pruebas Unitarias:** Ubicadas en `tests/`, nombradas en `camelCase` finalizadas en `.test.js` (Ej. `inventoryService.test.js`).
+
+---
+
+## 🗺️ 7. ROADMAP ARQUITECTÓNICO Y EVOLUCIÓN
+
+### **Versión 2.0 (Completado) ✅**
+- [x] Desacoplamiento de la Capa de Dominio `InventoryService`.
+- [x] Rediseño POS de Alta Velocidad (Square POS Style, Header 1-Fila, Buscador Dominante).
+- [x] Modo Escáner USB con Beep Audio a 880Hz y autoFocus.
+- [x] Modularización de la Interfaz del POS (`src/components/POS/`).
+- [x] Suite de Pruebas Unitarias de Inventario (`npm run test`).
+- [x] Modal de Auditoría e Historial de Movimientos Kardex (`KardexModal.jsx`).
+
+### **Versión 3.0 (Planificado) 🚀**
+- [ ] Módulo de Arqueo y Cierre de Caja (Control de turnos, descuadres y reportes de efectivo).
+- [ ] Arquitectura Multi-Sucursal (Múltiples depósitos/almacenes por colmado).
+- [ ] Sistema de Permisos y Roles de Usuario (Cajero, Administrador, Colmadero).
+- [ ] Panel de Analítica Financiera (Margen de ganancia, productos estrella, ventas por hora).
+- [ ] API REST Pública / Webhooks para integración con balanzas e impresoras fiscales.
 
 ---
 
