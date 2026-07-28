@@ -1,17 +1,77 @@
-import React, { useState } from 'react';
-import { getDeliveryLedger, calculateCourierCashBalances, reconcileCourierShift } from '../../services/cashControlService.js';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  getDeliveryLedger,
+  calculateCourierCashBalances,
+  reconcileCourierShift,
+  getStoredCourierReconciliations,
+  saveStoredCourierReconciliation
+} from '../../services/cashControlService.js';
+import {
+  persistToLocalStorage,
+  broadcastStatusUpdate,
+  updateSupabaseStatus
+} from '../../services/orderSyncService.js';
 
 /**
  * SYSPIM MARKET - CONTROL DE DELIVERY & LIBRO MAYOR BANCARIO (TX-XXXX)
  */
-export function DeliveryLedgerModule({ pedidos = [], onToast }) {
+export function DeliveryLedgerModule({ pedidos = [], setPedidos, onToast }) {
   const [selectedCourier, setSelectedCourier] = useState('carlos');
-  const [dineroEntregadoInput, setDineroEntregadoInput] = useState('');
-  const [reconciliationResult, setReconciliationResult] = useState(null);
+  const [courierReconciliations, setCourierReconciliations] = useState(() => getStoredCourierReconciliations());
+  const [dineroEntregadoInput, setDineroEntregadoInput] = useState(() => {
+    const initialRec = getStoredCourierReconciliations()['carlos'];
+    return initialRec ? String(initialRec.dineroRecibido) : '';
+  });
+  // Contador para forzar re-cálculo cuando localStorage cambia desde otra pestaña
+  const [refreshTick, setRefreshTick] = useState(0);
 
-  const balances = calculateCourierCashBalances({ pedidos });
+  // Escuchar cambios de localStorage (delivery confirma entrega en otra pestaña)
+  useEffect(() => {
+    const handleStorage = (e) => {
+      if (e.key === 'syspim_pos_pedidos' || e.key === 'syspim_delivery_trips') {
+        setRefreshTick(t => t + 1);
+      }
+    };
+    // También escuchar BroadcastChannel
+    let bc;
+    try {
+      bc = new BroadcastChannel('syspim_orders_channel');
+      bc.onmessage = (ev) => {
+        if (ev.data?.type === 'STATUS_UPDATE') {
+          setRefreshTick(t => t + 1);
+        }
+      };
+    } catch(e) {}
+
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      try { bc?.close(); } catch(e) {}
+    };
+  }, []);
+
+  // refreshTick is used implicitly: when it changes, the component re-renders
+  // and recalculates rawBalances and ledger from fresh localStorage data
+  const rawBalances = calculateCourierCashBalances({ pedidos });
+
+
+  const balances = rawBalances.map(b => {
+    const rec = courierReconciliations[b.id];
+    return {
+      ...b,
+      estado: rec ? rec.status : b.estado,
+      reconciliationResult: rec || null
+    };
+  });
+
   const currentCourier = balances.find(c => c.id === selectedCourier) || balances[0];
   const ledger = getDeliveryLedger({ repartidorId: selectedCourier, pedidos });
+
+  const handleCourierSelect = (courierId) => {
+    setSelectedCourier(courierId);
+    const existingRec = courierReconciliations[courierId];
+    setDineroEntregadoInput(existingRec ? String(existingRec.dineroRecibido) : '');
+  };
 
   const handleReconcile = (e) => {
     e.preventDefault();
@@ -22,8 +82,45 @@ export function DeliveryLedgerModule({ pedidos = [], onToast }) {
       dineroEsperado: currentCourier.dineroEsperado
     });
 
-    setReconciliationResult(result);
+    const updated = saveStoredCourierReconciliation(selectedCourier, result);
+    setCourierReconciliations(updated);
+
+    // Actualizar el estado de los pedidos entregados/completados a 'rendido' para este repartidor
+    if (setPedidos) {
+      setPedidos(prev => {
+        const nextList = prev.map(p => {
+          const courierIdOfOrder = (p.repartidorId || p.delivery_id || 'general').toLowerCase();
+          if (courierIdOfOrder === selectedCourier.toLowerCase() && 
+              (p.estado === 'entregado' || p.estado === 'completado' || p.status === 'entregado' || p.status === 'completado')) {
+            const updatedOrder = { ...p, estado: 'rendido', status: 'rendido' };
+            broadcastStatusUpdate(updatedOrder);
+            updateSupabaseStatus(p, 'rendido');
+            return updatedOrder;
+          }
+          return p;
+        });
+        persistToLocalStorage(nextList);
+        return nextList;
+      });
+    }
+
     if (onToast) onToast(`🚚 Cierre Procesado: Estado ${result.status}`);
+  };
+
+  const currentReconciliationResult = courierReconciliations[selectedCourier];
+
+  const getStatusBadge = (estado) => {
+    switch (estado) {
+      case 'CUADRADO':
+        return { label: '✔ Cuadrado', className: 'bg-[#DCFCE7] text-[#15803D]' };
+      case 'FALTANTE':
+        return { label: '⚠️ Faltante', className: 'bg-[#FEE2E2] text-[#DC2626]' };
+      case 'SOBRANTE':
+        return { label: '➕ Sobrante', className: 'bg-[#FEFCE8] text-[#854D0E]' };
+      case 'PENDIENTE':
+      default:
+        return { label: '❌ Pendiente', className: 'bg-[#FEFCE8] text-[#854D0E]' };
+    }
   };
 
   return (
@@ -45,10 +142,7 @@ export function DeliveryLedgerModule({ pedidos = [], onToast }) {
           <span className="text-xs font-extrabold text-[#64748B]">Repartidor:</span>
           <select
             value={selectedCourier}
-            onChange={(e) => {
-              setSelectedCourier(e.target.value);
-              setReconciliationResult(null);
-            }}
+            onChange={(e) => handleCourierSelect(e.target.value)}
             className="bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl px-3.5 py-2 text-xs font-extrabold text-[#0F172A] focus:outline-none"
           >
             {balances.map(b => (
@@ -60,33 +154,31 @@ export function DeliveryLedgerModule({ pedidos = [], onToast }) {
 
       {/* TARJETAS DE SALDOS POR REPARTIDOR */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {balances.map(b => (
-          <div
-            key={b.id}
-            onClick={() => {
-              setSelectedCourier(b.id);
-              setReconciliationResult(null);
-            }}
-            className={`p-5 rounded-[22px] border cursor-pointer transition-all ${
-              selectedCourier === b.id
-                ? 'bg-[#E0F2FE] border-[#0284C7] shadow-md ring-2 ring-[#0284C7]/20'
-                : 'bg-white border-[#E2E8F0] hover:bg-[#F8FAFC]'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-extrabold text-sm text-[#0F172A] font-jakarta">{b.nombre}</span>
-              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
-                b.estado === 'CUADRADO' ? 'bg-[#DCFCE7] text-[#15803D]' : 'bg-[#FEFCE8] text-[#854D0E]'
-              }`}>
-                {b.estado === 'CUADRADO' ? '✔ Cuadrado' : '❌ Pendiente'}
-              </span>
+        {balances.map(b => {
+          const badge = getStatusBadge(b.estado);
+          return (
+            <div
+              key={b.id}
+              onClick={() => handleCourierSelect(b.id)}
+              className={`p-5 rounded-[22px] border cursor-pointer transition-all ${
+                selectedCourier === b.id
+                  ? 'bg-[#E0F2FE] border-[#0284C7] shadow-md ring-2 ring-[#0284C7]/20'
+                  : 'bg-white border-[#E2E8F0] hover:bg-[#F8FAFC]'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-sm text-[#0F172A] font-jakarta">{b.nombre}</span>
+                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${badge.className}`}>
+                  {badge.label}
+                </span>
+              </div>
+              <div className="mt-3">
+                <span className="text-[10.5px] font-bold text-[#64748B] block uppercase tracking-wider">Dinero Esperado</span>
+                <span className="text-2xl font-black text-[#0284C7] font-mono-tabular">RD$ {b.dineroEsperado.toLocaleString('es-DO')}</span>
+              </div>
             </div>
-            <div className="mt-3">
-              <span className="text-[10.5px] font-bold text-[#64748B] block uppercase tracking-wider">Dinero Esperado</span>
-              <span className="text-2xl font-black text-[#0284C7] font-mono-tabular">RD$ {b.dineroEsperado.toLocaleString('es-DO')}</span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* DELIVERY LEDGER BANCARIO (TX-XXXX) Y ARQUEO */}
@@ -145,7 +237,7 @@ export function DeliveryLedgerModule({ pedidos = [], onToast }) {
 
           <form onSubmit={handleReconcile} className="space-y-3">
             <div>
-              <label className="block text-xs font-bold text-[#64748B] mb-1">Efectivo Entregado a Caja RD$</label>
+              <label className="block text-xs font-bold text-[#64748B]">Efectivo Entregado a Caja RD$</label>
               <input
                 type="number"
                 value={dineroEntregadoInput}
@@ -163,16 +255,16 @@ export function DeliveryLedgerModule({ pedidos = [], onToast }) {
           </form>
 
           {/* RESULTADO CON 4 ESTADOS DE CONCILIACIÓN */}
-          {reconciliationResult && (
+          {currentReconciliationResult && (
             <div className={`p-4 rounded-2xl border text-center space-y-1 animate-fade-in-up ${
-              reconciliationResult.status === 'CUADRADO' ? 'bg-[#DCFCE7] border-[#86EFAC] text-[#15803D]' :
-              reconciliationResult.status === 'FALTANTE' ? 'bg-[#FEE2E2] border-[#FECACA] text-[#DC2626]' :
-              reconciliationResult.status === 'SOBRANTE' ? 'bg-[#FEFCE8] border-[#FEF08A] text-[#854D0E]' :
+              currentReconciliationResult.status === 'CUADRADO' ? 'bg-[#DCFCE7] border-[#86EFAC] text-[#15803D]' :
+              currentReconciliationResult.status === 'FALTANTE' ? 'bg-[#FEE2E2] border-[#FECACA] text-[#DC2626]' :
+              currentReconciliationResult.status === 'SOBRANTE' ? 'bg-[#FEFCE8] border-[#FEF08A] text-[#854D0E]' :
               'bg-[#F1F5F9] border-[#CBD5E1] text-[#475569]'
             }`}>
-              <span className="text-2xl font-extrabold block">{reconciliationResult.icon}</span>
-              <span className="font-black text-sm uppercase block font-jakarta">Estado: {reconciliationResult.status}</span>
-              <p className="text-xs font-medium">{reconciliationResult.message}</p>
+              <span className="text-2xl font-extrabold block">{currentReconciliationResult.icon}</span>
+              <span className="font-black text-sm uppercase block font-jakarta">Estado: {currentReconciliationResult.status}</span>
+              <p className="text-xs font-medium">{currentReconciliationResult.message}</p>
             </div>
           )}
         </div>

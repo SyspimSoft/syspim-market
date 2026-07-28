@@ -127,9 +127,9 @@ export function DashboardOverview({
             </span>
           </div>
           <span className="text-2xl font-black text-[#9333EA] block font-jakarta">
-            RD$ {courierBalances.reduce((acc, c) => acc + c.dineroEsperado, 0).toLocaleString('es-DO')}
+            RD$ {courierBalances.filter(c => c.estado !== 'CUADRADO').reduce((acc, c) => acc + c.dineroEsperado, 0).toLocaleString('es-DO')}
           </span>
-          <p className="text-[10.5px] text-[#64748B] font-medium">Dinero en la calle pendiente de arqeuo</p>
+          <p className="text-[10.5px] text-[#64748B] font-medium">Dinero en la calle pendiente de arqueo</p>
         </div>
 
         {/* TARJETA 5: ALERTAS Y TICKET PROMEDIO */}

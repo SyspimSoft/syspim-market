@@ -405,7 +405,13 @@ import '../styles.css';
                   return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
                 });
 
+            const uniquePedId = 'PED-' + String(Date.now()).slice(-5) + Math.floor(10 + Math.random() * 90);
+
             const cleanPayment = paymentMethod.toLowerCase().includes('tarjeta') ? 'tarjeta' : (paymentMethod.toLowerCase().includes('fiado') ? 'fiado' : 'efectivo');
+
+            const isEfectivo = cleanPayment === 'efectivo' || paymentMethod === 'Efectivo';
+            const pagoConAmount = isEfectivo ? (cashVal > 0 ? cashVal : cartTotal) : cartTotal;
+            const devueltaAmount = isEfectivo ? devueltaMonto : 0;
 
             // Payload para la base de datos Supabase Cloud (Formato de tabla validado 100%)
             const dbPayload = {
@@ -416,6 +422,8 @@ import '../styles.css';
               direccion_entrega: finalDireccion,
               delivery_token: 'DEL-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
               monto_total: cartTotal,
+              monto_pagado_con: pagoConAmount,
+              devuelta_cliente: devueltaAmount,
               metodo_pago: cleanPayment,
               estado: 'pendiente',
               created_at: new Date().toISOString()
@@ -424,8 +432,11 @@ import '../styles.css';
             // Payload rico para la interfaz local y cross-tab
             const orderPayload = {
               ...dbPayload,
-              id: 'PED-' + Math.floor(100000 + Math.random() * 900000),
+              id: uniquePedId,
+              ped_id: uniquePedId,
               uuid: generatedUuid,
+              monto_pagado_con: pagoConAmount,
+              devuelta_cliente: devueltaAmount,
               metodo_pago: pagoDetalle,
               detalles: cart.map(i => ({ cantidad: i.qty, nombre: i.nombre, precio_unitario: i.precio }))
             };
@@ -441,6 +452,17 @@ import '../styles.css';
 
             // Guardar en localStorage para desencadenar el evento de almacenamiento cruzado
             localStorage.setItem('syspim_last_order', JSON.stringify({ ...orderPayload, timestamp: Date.now() }));
+            
+            // Actualizar lista principal de pedidos pos/delivery en localStorage
+            try {
+              const currentPosOrders = JSON.parse(localStorage.getItem('syspim_pos_pedidos') || '[]');
+              if (!currentPosOrders.some(p => p.id === orderPayload.id || (p.uuid && p.uuid === orderPayload.uuid))) {
+                const updatedPos = [orderPayload, ...currentPosOrders];
+                localStorage.setItem('syspim_pos_pedidos', JSON.stringify(updatedPos));
+                localStorage.setItem('syspim_delivery_trips', JSON.stringify(updatedPos));
+              }
+            } catch(e) {}
+
             try {
               const queue = JSON.parse(localStorage.getItem('syspim_pending_orders_queue') || '[]');
               if (!queue.some(q => q.id === orderPayload.id)) {

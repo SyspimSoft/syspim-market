@@ -61,7 +61,7 @@ export function getPrioritizedAlerts({ productos = [], pedidos = [], courierBala
     });
   }
 
-  const highCourierCash = courierBalances.filter(c => c.dineroEsperado > 3000);
+  const highCourierCash = courierBalances.filter(c => c.estado === 'PENDIENTE' && c.dineroEsperado > 3000);
   if (highCourierCash.length > 0) {
     alerts.push({
       id: 'alt-2',

@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom/client';
 import '../styles.css';
+import {
+  isSameOrder,
+  mergeOrder,
+  updateOrderStatus as syncUpdateOrderStatus,
+  persistToLocalStorage,
+  readFromLocalStorage,
+  createStorageHandler,
+  createBroadcastListener
+} from './services/orderSyncService.js';
 
 const INITIAL_DELIVERIES = [
   {
@@ -68,11 +77,8 @@ function StandaloneDeliveryApp() {
 
   // Lista de viajes/pedidos
   const [trips, setTrips] = useState(() => {
-    try {
-      const saved = localStorage.getItem('syspim_pos_pedidos');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {}
-    return INITIAL_DELIVERIES;
+    const fromStorage = readFromLocalStorage();
+    return fromStorage.length > 0 ? fromStorage : INITIAL_DELIVERIES;
   });
 
   const showToast = (msg) => {
@@ -80,13 +86,33 @@ function StandaloneDeliveryApp() {
     setTimeout(() => setToastMsg(null), 3000);
   };
 
-  // Sincronizar viajes con localStorage y BroadcastChannel
+  // Escuchador Realtime — usa factories centralizadas de orderSyncService
   useEffect(() => {
-    try {
-      localStorage.setItem('syspim_pos_pedidos', JSON.stringify(trips));
-      localStorage.setItem('syspim_delivery_trips', JSON.stringify(trips));
-    } catch(e) {}
-  }, [trips]);
+    const handleNewOrder = (rawOrder) => {
+      if (!rawOrder) return;
+      setTrips(prev => {
+        const existingIdx = prev.findIndex(t => isSameOrder(t, rawOrder));
+        if (existingIdx >= 0) {
+          const merged = mergeOrder(prev[existingIdx], rawOrder);
+          const updated = [...prev];
+          updated[existingIdx] = merged;
+          return updated;
+        }
+        showToast(`🔔 ¡Nuevo pedido recibido: ${rawOrder.id}!`);
+        return [rawOrder, ...prev];
+      });
+    };
+
+    // Usa factories centralizadas
+    const broadcast = createBroadcastListener(setTrips, handleNewOrder);
+    const handleStorageChange = createStorageHandler(setTrips, handleNewOrder);
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      try { broadcast?.close(); } catch(e) {}
+    };
+  }, []);
 
   // Estadísticas del Turno & Efectivo
   const stats = useMemo(() => {
@@ -116,44 +142,43 @@ function StandaloneDeliveryApp() {
     };
   }, [trips]);
 
+  // isSameOrder imported from orderSyncService.js
+
   // Marcar entrega con evidencia (Foto + Firma)
   const confirmDeliveryOrder = (order) => {
-    setTrips(prev => prev.map(t => {
-      if (t.id === order.id || (t.uuid && t.uuid === order.uuid)) {
-        return {
-          ...t,
-          estado: 'entregado',
-          status: 'entregado',
-          evidence: {
-            clientReceived: confirmReceived === 'si',
-            notes: confirmNotes,
-            photo: confirmPhoto || 'evidencia_simulada.jpg',
-            timestamp: new Date().toISOString()
-          }
-        };
-      }
-      return t;
-    }));
+    if (!order) return;
+
+    // Cerrar modal INMEDIATAMENTE antes de cualquier operación async
+    setConfirmModalOrder(null);
+    setConfirmNotes('');
+    setConfirmPhoto(null);
+
+    const evidence = {
+      clientReceived: confirmReceived === 'si',
+      notes: confirmNotes,
+      photo: confirmPhoto || 'evidencia_simulada.jpg',
+      timestamp: new Date().toISOString()
+    };
+
+    // syncUpdateOrderStatus: React state → localStorage → BroadcastChannel → Supabase
+    syncUpdateOrderStatus(setTrips, order, 'entregado', { evidence });
 
     // Registrar en Ledger
     const isEfectivo = (order.metodo_pago || '').toLowerCase().includes('efectivo');
     const montoCobrado = order.monto_pagado_con || order.monto_total || 0;
     const cambio = order.devuelta_cliente || 0;
+    const neto = isEfectivo ? (montoCobrado - cambio) : 0;
 
-    const newTx1 = {
+    setLedger(prev => [{
       txId: `TX-${Math.floor(100000 + Math.random() * 900000)}`,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       type: 'COBRO_PEDIDO',
       reference: order.id,
       description: `Cobro Pedido ${order.id}`,
-      amount: isEfectivo ? (montoCobrado - cambio) : 0,
-      balance: stats.dineroEnMano + (isEfectivo ? (montoCobrado - cambio) : 0)
-    };
+      amount: neto,
+      balance: stats.dineroEnMano + neto
+    }, ...prev]);
 
-    setLedger(prev => [newTx1, ...prev]);
-    setConfirmModalOrder(null);
-    setConfirmNotes('');
-    setConfirmPhoto(null);
     showToast(`✨ ¡Entrega #${order.id} registrada con evidencia!`);
   };
 
@@ -164,13 +189,17 @@ function StandaloneDeliveryApp() {
     const esperado = stats.dineroEnMano;
     const diff = contado - esperado;
 
-    // Actualizar estado de pedidos entregados a 'rendido'
-    setTrips(prev => prev.map(t => {
-      if ((t.estado || t.status) === 'entregado') {
-        return { ...t, estado: 'rendido', status: 'rendido' };
-      }
-      return t;
-    }));
+    // Actualizar estado de pedidos entregados a 'rendido' y persistir
+    setTrips(prev => {
+      const nextTrips = prev.map(t => {
+        if ((t.estado || t.status) === 'entregado') {
+          return { ...t, estado: 'rendido', status: 'rendido' };
+        }
+        return t;
+      });
+      persistToLocalStorage(nextTrips);
+      return nextTrips;
+    });
 
     // Registrar movimiento en el Ledger de entrega a Caja
     const newTx = {
@@ -197,7 +226,16 @@ function StandaloneDeliveryApp() {
   const filteredTrips = useMemo(() => {
     return trips.filter(t => {
       const st = t.estado || t.status || 'en_camino';
-      if (selectedFilter === 'en_camino') return st === 'en_camino' || st === 'preparandose' || st === 'aceptado';
+      
+      // 1. Evitar mostrar pedidos pendientes que aún no han sido despachados
+      if (st === 'pendiente') return false;
+
+      // 2. Solo mostrar pedidos asignados a este repartidor (carlos)
+      const assignedId = (t.repartidorId || t.delivery_id || 'carlos').toLowerCase();
+      if (assignedId !== 'carlos') return false;
+
+      // 3. Aplicar el filtro de la UI
+      if (selectedFilter === 'en_camino') return st === 'en_camino' || st === 'despachado' || st === 'preparandose' || st === 'aceptado';
       if (selectedFilter === 'entregado') return st === 'entregado';
       if (selectedFilter === 'rendido') return st === 'rendido';
       return true;
@@ -269,7 +307,14 @@ function StandaloneDeliveryApp() {
               const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip.direccion_entrega)}`;
               
               // Alerta de cambio insuficiente en mano
-              const reqChange = trip.devuelta_cliente || 0;
+              const montoPagaCon = trip.monto_pagado_con !== undefined && trip.monto_pagado_con !== null
+                ? Number(trip.monto_pagado_con)
+                : Number(trip.monto_total || 0);
+
+              const reqChange = trip.devuelta_cliente !== undefined && trip.devuelta_cliente !== null
+                ? Number(trip.devuelta_cliente)
+                : Math.max(0, montoPagaCon - Number(trip.monto_total || 0));
+
               const hasInsufficientChange = reqChange > cambioDisponible;
 
               return (
@@ -317,7 +362,7 @@ function StandaloneDeliveryApp() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-[#64748B] font-medium">Cliente Paga Con:</span>
-                      <span className="font-bold text-[#0284C7] font-mono">RD$ {(trip.monto_pagado_con || trip.monto_total || 0).toFixed(2)}</span>
+                      <span className="font-bold text-[#0284C7] font-mono">RD$ {montoPagaCon.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between border-t border-[#E2E8F0] pt-1 text-[#DC2626] font-extrabold">
                       <span>Cambio Requerido:</span>
@@ -482,8 +527,15 @@ function StandaloneDeliveryApp() {
 
       {/* MODAL: CONFIRMACIÓN DE ENTREGA CON EVIDENCIA (FOTO + NOTAS + RECIBIDO) */}
       {confirmModalOrder && (
-        <div className="fixed inset-0 z-50 bg-[#060B14]/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white max-w-sm w-full p-6 rounded-[24px] shadow-2xl space-y-4">
+        <div
+          className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center p-4"
+          style={{ backdropFilter: 'blur(4px)' }}
+          onClick={() => setConfirmModalOrder(null)}
+        >
+          <div
+            className="bg-white max-w-sm w-full p-6 rounded-[24px] shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="font-extrabold text-base text-[#0F172A] text-center">✔ Confirmar Entrega #{confirmModalOrder.id}</h3>
             
             <div className="space-y-3 text-xs">
@@ -529,14 +581,16 @@ function StandaloneDeliveryApp() {
 
             <div className="flex gap-2 pt-2">
               <button
+                type="button"
                 onClick={() => setConfirmModalOrder(null)}
-                className="flex-1 py-3 bg-[#F1F5F9] text-[#64748B] font-bold text-xs rounded-xl"
+                className="flex-1 py-3 bg-[#F1F5F9] text-[#64748B] font-bold text-xs rounded-xl hover:bg-[#E2E8F0] transition-colors"
               >
                 Cancelar
               </button>
               <button
+                type="button"
                 onClick={() => confirmDeliveryOrder(confirmModalOrder)}
-                className="flex-2 py-3 bg-[#15803D] text-white font-bold text-xs rounded-xl shadow-md"
+                className="flex-1 py-3 bg-[#15803D] text-white font-bold text-xs rounded-xl shadow-md hover:bg-[#166534] transition-colors"
               >
                 ✔ Guardar & Confirmar
               </button>
@@ -547,13 +601,21 @@ function StandaloneDeliveryApp() {
 
       {/* MODAL: SOS AYUDA E INCIDENCIAS */}
       {issueModalOrder && (
-        <div className="fixed inset-0 z-50 bg-[#060B14]/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white max-w-sm w-full p-6 rounded-[24px] shadow-2xl space-y-4">
+        <div
+          className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center p-4"
+          style={{ backdropFilter: 'blur(4px)' }}
+          onClick={() => setIssueModalOrder(null)}
+        >
+          <div
+            className="bg-white max-w-sm w-full p-6 rounded-[24px] shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="font-extrabold text-base text-[#0F172A] text-center">🆘 Reportar Incidencia #{issueModalOrder.id}</h3>
             <div className="space-y-2">
               {['Cliente no responde', 'No encuentro dirección', 'Accidente / Caída', 'Vehículo averiado', 'Problema con el cobro', 'Pedido rechazado'].map(reason => (
                 <button
                   key={reason}
+                  type="button"
                   onClick={() => {
                     showToast(`⚠️ Incidencia SOS enviada a central: ${reason}`);
                     setIssueModalOrder(null);
@@ -565,8 +627,9 @@ function StandaloneDeliveryApp() {
               ))}
             </div>
             <button
+              type="button"
               onClick={() => setIssueModalOrder(null)}
-              className="w-full py-2.5 bg-[#F1F5F9] text-[#64748B] font-bold text-xs rounded-xl"
+              className="w-full py-2.5 bg-[#F1F5F9] text-[#64748B] font-bold text-xs rounded-xl hover:bg-[#E2E8F0] transition-colors"
             >
               Cerrar
             </button>
@@ -576,8 +639,15 @@ function StandaloneDeliveryApp() {
 
       {/* MODAL: RENDICIÓN A CAJA */}
       {cashSettlementModal && (
-        <div className="fixed inset-0 z-50 bg-[#060B14]/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white max-w-sm w-full p-6 rounded-[24px] shadow-2xl space-y-4 text-center">
+        <div
+          className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center p-4"
+          style={{ backdropFilter: 'blur(4px)' }}
+          onClick={() => { setCashSettlementModal(false); setSettlementResult(null); }}
+        >
+          <div
+            className="bg-white max-w-sm w-full p-6 rounded-[24px] shadow-2xl space-y-4 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="font-extrabold text-base text-[#0F172A]">💰 Rendición a Caja Principal</h3>
             
             <div className="bg-[#FEFCE8] border border-[#FEF08A] p-3 rounded-xl text-xs">
@@ -595,7 +665,7 @@ function StandaloneDeliveryApp() {
               />
               <button
                 type="submit"
-                className="w-full py-3 bg-[#0284C7] text-white font-bold text-xs rounded-xl shadow-md"
+                className="w-full py-3 bg-[#0284C7] text-white font-bold text-xs rounded-xl shadow-md hover:bg-[#0369A1] transition-colors"
               >
                 Procesar Rendición
               </button>
@@ -610,11 +680,12 @@ function StandaloneDeliveryApp() {
             )}
 
             <button
+              type="button"
               onClick={() => {
                 setCashSettlementModal(false);
                 setSettlementResult(null);
               }}
-              className="w-full py-2.5 bg-[#F1F5F9] text-[#64748B] font-bold text-xs rounded-xl"
+              className="w-full py-2.5 bg-[#F1F5F9] text-[#64748B] font-bold text-xs rounded-xl hover:bg-[#E2E8F0] transition-colors"
             >
               Cerrar
             </button>

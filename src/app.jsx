@@ -14,6 +14,16 @@ import { DashboardOverview } from './components/Dashboard/DashboardOverview.jsx'
 import { CashDrawerModule } from './components/Dashboard/CashDrawerModule.jsx';
 import { DeliveryLedgerModule } from './components/Dashboard/DeliveryLedgerModule.jsx';
 import { ReportsModule } from './components/Dashboard/ReportsModule.jsx';
+import {
+  isSameOrder,
+  mergeOrder,
+  mergeOrderList,
+  updateOrderStatus as syncUpdateOrderStatus,
+  persistToLocalStorage,
+  readFromLocalStorage,
+  createStorageHandler,
+  createBroadcastListener
+} from './services/orderSyncService.js';
 
 // --- DATOS DEMO DE COLMADOS MULTI-TENANT ---
 const DEMO_TENANTS = [
@@ -1096,40 +1106,16 @@ function App() {
     return 'dashboard';
   });
 
+  // isSameOrder is imported from orderSyncService.js
+
   // ESTADO REALTIME DE PEDIDOS SOLICITADOS POR CLIENTES
   const [pedidos, setPedidos] = useState(() => {
-    try {
-      const saved = localStorage.getItem('syspim_pos_pedidos');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {}
-    return window.AppState?.pedidos || [
-      {
-        id: 'D-203641',
-        cliente_nombre: 'juan',
-        cliente_telefono: '8095131416',
-        direccion_entrega: 'calle ñ',
-        monto_total: 458.00,
-        metodo_pago: 'Efectivo (Monto Exacto RD$ 458.00)',
-        estado: 'en_camino',
-        status: 'en_camino',
-        delivery_token: 'DEL-96B17L',
-        created_at: new Date().toISOString(),
-        detalles: [
-          { cantidad: 1, nombre: 'Bravo Leche Uht Entera 1Lt', precio_unitario: 59 },
-          { cantidad: 1, nombre: 'Refresco Coca-Cola 2 Litros', precio_unitario: 95 },
-          { cantidad: 1, nombre: 'Huevos Frescos Cartón 30 Unid', precio_unitario: 195 },
-          { cantidad: 1, nombre: 'Bravo Dulce De Leche 400 Gr', precio_unitario: 109 }
-        ]
-      }
-    ];
+    const fromStorage = readFromLocalStorage();
+    if (fromStorage.length > 0) return fromStorage;
+    return window.AppState?.pedidos || [];
   });
 
-  // Sincronizar pedidos con localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem('syspim_pos_pedidos', JSON.stringify(pedidos));
-    } catch (e) {}
-  }, [pedidos]);
+  const [dispatchingOrder, setDispatchingOrder] = useState(null);
 
   // Búsqueda y Filtros POS / Catálogo
   const [searchQuery, setSearchQuery] = useState('');
@@ -1240,8 +1226,18 @@ function App() {
     const handleNewOrder = (rawOrder) => {
       if (!rawOrder) return;
       
-      const isUuid = (rawOrder.id || '').length > 20 && (rawOrder.id || '').includes('-');
-      const displayId = isUuid ? ('PED-' + rawOrder.id.slice(-6).toUpperCase()) : rawOrder.id;
+      // --- Normalización de ID ---
+      const rawIdStr = String(rawOrder.id || '');
+      const isUuid = rawIdStr.length > 20 && rawIdStr.includes('-');
+      let displayId = rawIdStr;
+      if (isUuid) {
+        displayId = rawOrder.ped_id || rawOrder.display_id || ('PED-' + rawIdStr.slice(-6).toUpperCase());
+      } else if (displayId.startsWith('D-')) {
+        displayId = 'PED-' + displayId.slice(2);
+      } else if (!displayId.startsWith('PED-')) {
+        const numPart = displayId.replace(/[^0-9]/g, '');
+        displayId = 'PED-' + (numPart || Math.floor(100000 + Math.random() * 900000));
+      }
 
       let detallesParsed = rawOrder.detalles;
       if (typeof detallesParsed === 'string') {
@@ -1262,12 +1258,18 @@ function App() {
         detalles: detallesParsed
       };
 
+      // --- Merge con protección de ranking ---
       setPedidos(prev => {
-        if (prev.some(p => p.id === newOrder.id || (p.uuid && p.uuid === newOrder.uuid))) {
-          return prev; // El pedido YA EXISTÍA: NO incrementar contadores de cliente ni ejecutar duplicados
+        const existingIdx = prev.findIndex(p => isSameOrder(p, newOrder));
+        if (existingIdx >= 0) {
+          // Usa mergeOrder centralizado (el estado más avanzado SIEMPRE gana)
+          const merged = mergeOrder(prev[existingIdx], newOrder);
+          const updatedList = [...prev];
+          updatedList[existingIdx] = merged;
+          return updatedList;
         }
 
-        // El pedido es REALMENTE NUEVO: actualizar cliente 1 sola vez
+        // --- Pedido REALMENTE NUEVO: side-effects de una sola vez ---
         if (newOrder.cliente_nombre) {
           setClientesList(cList => {
             const phone = (newOrder.cliente_telefono || '').replace(/[^0-9]/g, '');
@@ -1285,7 +1287,7 @@ function App() {
               };
               return updated;
             } else {
-              const newCustomerObj = {
+              return [{
                 id: 'c-' + Date.now(),
                 nombre: newOrder.cliente_nombre,
                 telefono: newOrder.cliente_telefono || '',
@@ -1294,13 +1296,12 @@ function App() {
                 pedidosCount: 1,
                 totalComprado: orderAmount,
                 ultimoPedido: 'Hoy'
-              };
-              return [newCustomerObj, ...cList];
+              }, ...cList];
             }
           });
         }
 
-        // Descontar inventario automáticamente en el POS si vienen detalles de productos
+        // Descontar inventario
         if (detallesParsed && Array.isArray(detallesParsed) && detallesParsed.length > 0) {
           setProductos(prevProds => {
             const updated = prevProds.map(prod => {
@@ -1314,65 +1315,42 @@ function App() {
               }
               return { ...prod, tenant_id: prod.tenant_id || 't-001' };
             });
-            try {
-              localStorage.setItem('syspim_productos_list', JSON.stringify(updated));
-            } catch(e){}
+            try { localStorage.setItem('syspim_productos_list', JSON.stringify(updated)); } catch(e){}
             return updated;
           });
         }
 
-        return [newOrder, ...prev];
+        // Persistir lista con el nuevo pedido
+        const nextList = [newOrder, ...prev];
+        persistToLocalStorage(nextList);
+        return nextList;
       });
 
-      // Actualizar memoria global
       if (window.AppState) {
         window.AppState.pedidos = window.AppState.pedidos || [];
-        if (!window.AppState.pedidos.some(p => p.id === newOrder.id)) {
+        if (!window.AppState.pedidos.some(p => isSameOrder(p, newOrder))) {
           window.AppState.pedidos.unshift(newOrder);
         }
       }
 
       setToast(`🛎️ ¡Nuevo pedido ${newOrder.id} de ${newOrder.cliente_nombre || 'Cliente'}!`);
-
-      // Alerta Sonora
       if (window.AdminModule && window.AdminModule.playNotificationSound) {
         window.AdminModule.playNotificationSound();
       }
     };
 
-    // 1. Escuchador de BroadcastChannel
-    let broadcast;
-    try {
-      broadcast = new BroadcastChannel('syspim_orders_channel');
-      broadcast.onmessage = (event) => {
-        if (event.data && event.data.type === 'NEW_ORDER' && event.data.order) {
-          handleNewOrder(event.data.order);
-        } else if (event.data && event.data.type === 'STATUS_UPDATE' && event.data.order) {
-          const updated = event.data.order;
-          setPedidos(prev => prev.map(p => p.id === updated.id ? { ...p, estado: updated.estado, status: updated.estado } : p));
-          setToast(`✨ Pedido #${updated.id.slice(-6)} actualizado a ${updated.estado.toUpperCase()}`);
-        }
-      };
-    } catch (e) {
-      console.log('BroadcastChannel error:', e);
-    }
+    // 1. BroadcastChannel (usa factory centralizada)
+    const broadcast = createBroadcastListener(
+      setPedidos,
+      handleNewOrder,
+      (updated) => setToast(`✨ Pedido ${updated.id || ''} actualizado a ${(updated.estado || updated.status || 'ENTREGADO').toUpperCase()}`)
+    );
 
-    // 2. Escuchador de localStorage
-    const handleStorageChange = (e) => {
-      if ((e.key === 'syspim_last_order' || e.key === 'syspim_pending_orders_queue') && e.newValue) {
-        try {
-          const parsed = JSON.parse(e.newValue);
-          if (Array.isArray(parsed)) {
-            parsed.forEach(o => handleNewOrder(o));
-          } else {
-            handleNewOrder(parsed);
-          }
-        } catch (err) {}
-      }
-    };
+    // 2. Storage listener (usa factory centralizada)
+    const handleStorageChange = createStorageHandler(setPedidos, handleNewOrder);
     window.addEventListener('storage', handleStorageChange);
 
-    // 3. Polling automático de seguridad cada 1.5 segundos para no perder ningún pedido
+    // 3. Polling de cola de seguridad
     const queueInterval = setInterval(() => {
       try {
         const queueStr = localStorage.getItem('syspim_pending_orders_queue');
@@ -1385,7 +1363,7 @@ function App() {
       } catch(e){}
     }, 1500);
 
-    // 4. Escuchador de Supabase Realtime, Polling Recurrente cada 3s y Carga Inicial
+    // 4. Supabase Realtime + Polling (usa mergeOrderList, nunca forEach+handleNewOrder)
     let supabaseSubscription;
     const fetchSupabaseOrders = () => {
       const sbClient = (window.ColmadoSupabase && window.ColmadoSupabase.client) || window.supabaseClient;
@@ -1393,18 +1371,23 @@ function App() {
         try {
           sbClient.from('pedidos').select('*').order('created_at', { ascending: false }).limit(20)
             .then(({ data }) => {
-              if (data && Array.isArray(data)) data.forEach(ord => handleNewOrder(ord));
-            }).catch(() => {});
-          sbClient.from('orders').select('*').order('created_at', { ascending: false }).limit(20)
-            .then(({ data }) => {
-              if (data && Array.isArray(data)) data.forEach(ord => handleNewOrder(ord));
+              if (data && Array.isArray(data)) {
+                setPedidos(prev => {
+                  const merged = mergeOrderList(prev, data.map(d => ({
+                    ...d,
+                    estado: d.estado || d.status || 'pendiente',
+                    status: d.estado || d.status || 'pendiente'
+                  })));
+                  return merged;
+                });
+              }
             }).catch(() => {});
         } catch(e){}
       }
     };
 
     fetchSupabaseOrders();
-    const supabaseInterval = setInterval(fetchSupabaseOrders, 3000);
+    const supabaseInterval = setInterval(fetchSupabaseOrders, 5000);
 
     const sbClient = (window.ColmadoSupabase && window.ColmadoSupabase.client) || window.supabaseClient;
     if (sbClient) {
@@ -1697,6 +1680,7 @@ function App() {
         {activeTab === 'delivery-control' && (
           <DeliveryLedgerModule
             pedidos={pedidos}
+            setPedidos={setPedidos}
             onToast={(msg) => setToast(msg)}
           />
         )}
@@ -1997,18 +1981,7 @@ function App() {
                               value={ped.estado || ped.status || 'pendiente'}
                               onChange={(e) => {
                                 const newStatus = e.target.value;
-                                setPedidos(prev => prev.map(p => {
-                                  if (p.id === ped.id) {
-                                    const updated = { ...p, estado: newStatus, status: newStatus };
-                                    try {
-                                      const broadcast = new BroadcastChannel('syspim_orders_channel');
-                                      broadcast.postMessage({ type: 'STATUS_UPDATE', order: updated });
-                                      broadcast.close();
-                                    } catch (err) {}
-                                    return updated;
-                                  }
-                                  return p;
-                                }));
+                                syncUpdateOrderStatus(setPedidos, ped, newStatus);
                                 setToast(`✅ Estado del pedido marcado como: ${newStatus.toUpperCase()}`);
                               }}
                               className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase border cursor-pointer focus:outline-none transition-all ${
@@ -2061,13 +2034,9 @@ function App() {
                             </span>
 
                             <div className="flex items-center gap-2 w-full sm:w-auto">
-                              {/* BOTÓN RÁPIDO PARA CAMBIAR DE ESTADO PENDIENTE -> EN CAMINO -> ENTREGADO */}
                               {(ped.estado || ped.status || 'pendiente') === 'pendiente' && (
                                 <button
-                                  onClick={() => {
-                                    setPedidos(prev => prev.map(p => p.id === ped.id ? { ...p, estado: 'en_camino', status: 'en_camino' } : p));
-                                    setToast(`🛵 Pedido marcado como EN CAMINO`);
-                                  }}
+                                  onClick={() => setDispatchingOrder(ped)}
                                   className="flex-1 sm:flex-initial px-3 py-2 bg-[#FEF3C7] hover:bg-[#FDE68A] text-[#B45309] border border-[#FDE68A] font-extrabold rounded-full text-xs flex items-center justify-center gap-1 transition-all"
                                 >
                                   🛵 Despachar
@@ -2077,7 +2046,7 @@ function App() {
                               {((ped.estado || ped.status) === 'en_camino' || (ped.estado || ped.status) === 'despachado') && (
                                 <button
                                   onClick={() => {
-                                    setPedidos(prev => prev.map(p => p.id === ped.id ? { ...p, estado: 'completado', status: 'completado' } : p));
+                                    syncUpdateOrderStatus(setPedidos, ped, 'completado');
                                     setToast(`✅ Pedido completado y marcado como ENTREGADO`);
                                   }}
                                   className="flex-1 sm:flex-initial px-3 py-2 bg-[#DCFCE7] hover:bg-[#BBF7D0] text-[#15803D] border border-[#86EFAC] font-extrabold rounded-full text-xs flex items-center justify-center gap-1 transition-all"
@@ -2131,7 +2100,14 @@ function App() {
                               <button
                                 onClick={() => {
                                   if (confirm(`¿Deseas eliminar el pedido #${ped.id.slice(-8)} de la lista?`)) {
-                                    setPedidos(prev => prev.filter(p => p.id !== ped.id));
+                                    setPedidos(prev => {
+                                      const nextList = prev.filter(p => !isSameOrder(p, ped));
+                                      try {
+                                        localStorage.setItem('syspim_pos_pedidos', JSON.stringify(nextList));
+                                        localStorage.setItem('syspim_delivery_trips', JSON.stringify(nextList));
+                                      } catch(e) {}
+                                      return nextList;
+                                    });
                                     setToast(`🗑️ Pedido #${ped.id.slice(-8)} eliminado`);
                                   }
                                 }}
@@ -2975,6 +2951,68 @@ function App() {
                 NUEVA VENTA
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: ASIGNAR REPARTIDOR & DESPACHAR */}
+      {dispatchingOrder && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center p-4"
+          style={{ backdropFilter: 'blur(4px)' }}
+          onClick={() => setDispatchingOrder(null)}
+        >
+          <div 
+            className="bg-white max-w-sm w-full p-6 rounded-[24px] shadow-2xl space-y-4 animate-fade-in-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-[#FEF3C7] text-[#B45309] text-2xl flex items-center justify-center mx-auto mb-2">
+                🛵
+              </div>
+              <h3 className="font-extrabold text-base text-[#0F172A]">Despachar Pedido #{dispatchingOrder.id.slice(-8)}</h3>
+              <p className="text-xs text-[#64748B] mt-1">Selecciona el repartidor que llevará este envío</p>
+            </div>
+
+            <div className="space-y-2">
+              {[
+                { id: 'carlos', nombre: 'Carlos Méndez', info: '⚡ Rápido • Turno Mañana', speed: '12-15 min' },
+                { id: 'pedro', nombre: 'Pedro Ramos', info: '🚴 Confiable • Turno Tarde', speed: '18-20 min' },
+                { id: 'juan', nombre: 'Juan Pérez', info: '🚗 Soporte Extra', speed: '25-30 min' }
+              ].map(rep => (
+                <button
+                  key={rep.id}
+                  type="button"
+                  onClick={() => {
+                    const token = `DEL-${Math.floor(100000 + Math.random() * 900000)}`;
+                    syncUpdateOrderStatus(setPedidos, dispatchingOrder, 'en_camino', {
+                      repartidorId: rep.id,
+                      repartidorNombre: rep.nombre,
+                      delivery_token: token
+                    });
+                    setToast(`🛵 Pedido asignado a ${rep.nombre} y marcado en camino`);
+                    setDispatchingOrder(null);
+                  }}
+                  className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-[#E2E8F0] hover:border-[#BAE6FD] hover:bg-[#F0F9FF] text-left transition-all group"
+                >
+                  <div>
+                    <span className="block font-bold text-xs text-[#0F172A] group-hover:text-[#0369A1]">{rep.nombre}</span>
+                    <span className="block text-[10px] text-[#64748B] mt-0.5">{rep.info}</span>
+                  </div>
+                  <span className="text-[10px] font-extrabold bg-[#F1F5F9] text-[#475569] group-hover:bg-[#E0F2FE] group-hover:text-[#0369A1] px-2 py-1 rounded-full font-mono transition-all">
+                    {rep.speed}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setDispatchingOrder(null)}
+              className="w-full py-3 bg-[#F1F5F9] hover:bg-[#E2E8F0] text-[#64748B] font-bold text-xs rounded-xl transition-all"
+            >
+              Cancelar
+            </button>
           </div>
         </div>
       )}

@@ -37,25 +37,30 @@ graph TD
 
     subgraph Capa 2: Servicios de Dominio (Pure ES6 Modules)
         S1[src/services/inventoryService.js]
-        S2[src/utils/broadcast.js - Realtime Sync]
-        S3[src/utils/helpers.js]
+        S2[src/services/orderSyncService.js - Centralized Order & State Sync]
+        S3[src/services/cashControlService.js - Cash & Ledger Control]
+        S4[src/services/financialService.js]
+        S5[src/services/analyticsService.js]
     end
 
     subgraph Capa 3: Persistencia y Tiempo Real
         P1[(Supabase Cloud Database)]
         P2[(LocalStorage - syspim_productos_list)]
-        P3[(LocalStorage - syspim_kardex_logs)]
-        P4[BroadcastChannel - syspim_orders_channel]
+        P3[(LocalStorage - syspim_pos_pedidos)]
+        P4[(LocalStorage - syspim_delivery_trips)]
+        P5[BroadcastChannel - syspim_orders_channel]
     end
 
     UI1 --> UI2
     UI1 --> S1
-    UI3 --> S1
     UI1 --> S2
+    UI4 --> S2
+    UI3 --> S1
     S1 --> P2
-    S1 --> P3
+    S2 --> P3
     S2 --> P4
-    S1 -. Sincronización .-> P1
+    S2 --> P5
+    S2 -. Sincronización .-> P1
 ```
 
 ---
@@ -192,6 +197,17 @@ sequenceDiagram
 ---
 
 ## 📜 4. HISTORIAL DE ACTUALIZACIONES (CHANGELOG)
+
+### **[2026-07-28] - Syspim Market v4.0: Centralización de Sincronización, Protección de Estados y Despacho con Repartidor**
+* **Servicio Central de Sincronización (`src/services/orderSyncService.js`):**
+  1. **Unificación de Estados:** Creación de `orderSyncService.js` que centraliza `STATUS_RANK`, `isSameOrder`, `mergeOrder`, `mergeOrderList` y `updateOrderStatus`.
+  2. **Protección Contra Regresiones:** El ranking numérico de estados (`STATUS_RANK`) previene que actualizaciones retrasadas (polling de Supabase, storage o broadcast de pestañas secundarias) degraden el estado de un pedido (ej. de `entregado` a `pendiente`).
+  3. **Factories de Eventos:** Métodos unificados `createStorageHandler` y `createBroadcastListener` compartidos por `app.jsx` y `delivery-entry.jsx`.
+* **Flujo de Despacho & Asignación de Repartidores:**
+  1. **Asignación en POS/Recepción:** Al dar clic en "Despachar" en `app.jsx`, se despliega un modal interactivo para seleccionar el repartidor (**Carlos Méndez**, **Pedro Ramos**, **Juan Pérez**). Al asignarlo, el pedido se marca como `en_camino` con sus metadatos del delivery y se genera su token.
+  2. **Workspace de Repartidor Filtrado (`delivery-entry.jsx`):** El repartidor solo ve los pedidos asignados a él y en estado activo (`en_camino`, `despachado`, `entregado`, etc.), ocultando pedidos pendientes o de otros repartidores.
+  3. **Arqueo y Reconciliación Integrada:** Al procesar el Arqueo de un repartidor en `DeliveryLedgerModule.jsx`, todos sus pedidos entregados cambian a `rendido` en lote, sincronizándose vía local/broadcast/Supabase. Esto limpia el "Delivery Pendiente" del Dashboard Gerencial en tiempo real.
+  4. **Modales con Z-Index Corregido:** Modales del delivery actualizados a `z-[100]` con filtros de backdrop de Tailwind nativos para evitar bloqueos táctiles en navegadores móviles.
 
 ### **[2026-07-28] - Syspim Market v3.0: Núcleo ERP, Delivery Ledger TX-XXXX & Pruebas Unitarias ERP**
 * **Servicios Contable-Financieros y ERP (`src/services/`):**
