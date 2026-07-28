@@ -1,492 +1,540 @@
-
-      import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom/client';
 import '../styles.css';
 
-      const INITIAL_DELIVERIES = [
-        {
-          id: 'D-203641',
-          cliente_nombre: 'juan',
-          cliente_telefono: '8095131416',
-          direccion_entrega: 'calle ñ',
-          monto_total: 458.00,
-          metodo_pago: 'Efectivo (Monto Exacto RD$ 458.00)',
-          estado: 'en_camino',
-          status: 'en_camino',
-          delivery_token: 'DEL-96B17L',
-          created_at: new Date().toISOString(),
-          detalles: [
-            { cantidad: 1, nombre: 'Bravo Leche Uht Entera 1Lt', precio_unitario: 59 },
-            { cantidad: 1, nombre: 'Refresco Coca-Cola 2 Litros', precio_unitario: 95 },
-            { cantidad: 1, nombre: 'Huevos Frescos Cartón 30 Unid', precio_unitario: 195 },
-            { cantidad: 1, nombre: 'Bravo Dulce De Leche 400 Gr', precio_unitario: 109 }
-          ]
-        }
-      ];
+const INITIAL_DELIVERIES = [
+  {
+    id: 'PED-4748',
+    cliente_nombre: 'Carlos Mendoza',
+    cliente_telefono: '8095550199',
+    direccion_entrega: 'Calle Pepillo Salcedo #14, Ensanche La Fe',
+    monto_total: 250.00,
+    monto_pagado_con: 500.00,
+    devuelta_cliente: 250.00,
+    metodo_pago: 'Efectivo',
+    estado: 'en_camino',
+    status: 'en_camino',
+    delivery_token: 'DEL-96B17L',
+    created_at: new Date(Date.now() - 5 * 60000).toISOString(),
+    detalles: [
+      { cantidad: 1, nombre: 'Refresco Coca-Cola 2 Litros', precio_unitario: 95 },
+      { cantidad: 1, nombre: 'Huevos Frescos Cartón 30 Unid', precio_unitario: 155 }
+    ]
+  },
+  {
+    id: 'PED-4749',
+    cliente_nombre: 'María Rodríguez',
+    cliente_telefono: '8095131416',
+    direccion_entrega: 'Av. 27 de Febrero #45, Apt. 3B',
+    monto_total: 350.00,
+    monto_pagado_con: 350.00,
+    devuelta_cliente: 0.00,
+    metodo_pago: 'Transferencia',
+    estado: 'en_camino',
+    status: 'en_camino',
+    delivery_token: 'DEL-[#4749]',
+    created_at: new Date(Date.now() - 18 * 60000).toISOString(),
+    detalles: [
+      { cantidad: 2, nombre: 'Bravo Leche Uht Entera 1Lt', precio_unitario: 59 },
+      { cantidad: 1, nombre: 'Bravo Dulce De Leche 400 Gr', precio_unitario: 232 }
+    ]
+  }
+];
 
-      function StandaloneDeliveryApp() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const tokenQuery = urlParams.get('token') || urlParams.get('order') || '';
+function StandaloneDeliveryApp() {
+  const [activeTab, setActiveTab] = useState('pedidos'); // 'pedidos' | 'ledger' | 'token_search'
+  const [selectedFilter, setSelectedFilter] = useState('todos'); // 'todos' | 'en_camino' | 'entregado'
+  const [toastMsg, setToastMsg] = useState(null);
+
+  // Modales
+  const [confirmModalOrder, setConfirmModalOrder] = useState(null);
+  const [issueModalOrder, setIssueModalOrder] = useState(null);
+  const [cashSettlementModal, setCashSettlementModal] = useState(false);
+  const [cashCountedInput, setCashCountedInput] = useState('');
+  const [settlementResult, setSettlementResult] = useState(null);
+
+  // Transacciones del Delivery Ledger del repartidor (TX-XXXX)
+  const [ledger, setLedger] = useState([
+    { txId: 'TX-001245', time: '09:15 AM', type: 'COBRO_PEDIDO', reference: 'PED-4745', description: 'Cobro pedido cliente', amount: 500, balance: 500 },
+    { txId: 'TX-001246', time: '09:18 AM', type: 'CAMBIO_CLIENTE', reference: 'PED-4745', description: 'Devuelta entregada a cliente', amount: -250, balance: 250 }
+  ]);
+
+  // Lista de pedidos asignados
+  const [trips, setTrips] = useState(() => {
+    try {
+      const saved = localStorage.getItem('syspim_pos_pedidos');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return INITIAL_DELIVERIES;
+  });
+
+  const showToast = (msg) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 3000);
+  };
+
+  // Sincronizar viajes con localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('syspim_pos_pedidos', JSON.stringify(trips));
+      localStorage.setItem('syspim_delivery_trips', JSON.stringify(trips));
+    } catch(e) {}
+  }, [trips]);
+
+  // Indicadores Financieros & Operativos del Turno
+  const stats = useMemo(() => {
+    const entregados = trips.filter(t => (t.estado || t.status) === 'entregado' || (t.estado || t.status) === 'completado');
+    const enCamino = trips.filter(t => (t.estado || t.status) === 'en_camino' || (t.estado || t.status) === 'pendiente');
+
+    const cobradoEfectivo = entregados
+      .filter(t => (t.metodo_pago || '').toLowerCase().includes('efectivo'))
+      .reduce((sum, t) => sum + (t.monto_pagado_con || t.monto_total || t.total || 0), 0);
+
+    const cambioEntregado = entregados
+      .filter(t => (t.metodo_pago || '').toLowerCase().includes('efectivo'))
+      .reduce((sum, t) => sum + (t.devuelta_cliente || 0), 0);
+
+    const dineroEnMano = cobradoEfectivo - cambioEntregado;
+
+    return {
+      dineroEnMano,
+      cobradoEfectivo,
+      cambioEntregado,
+      countActivos: enCamino.length,
+      countEntregados: entregados.length,
+      tiempoPromedioMin: 16
+    };
+  }, [trips]);
+
+  // Marcar pedido como entregado y registrar en Delivery Ledger (TX-XXXX)
+  const confirmDeliveryOrder = (order) => {
+    setTrips(prev => prev.map(t => {
+      if (t.id === order.id || (t.uuid && t.uuid === order.uuid)) {
+        return { ...t, estado: 'entregado', status: 'entregado' };
+      }
+      return t;
+    }));
+
+    // Registrar en Ledger
+    const isEfectivo = (order.metodo_pago || '').toLowerCase().includes('efectivo');
+    const montoCobrado = order.monto_pagado_con || order.monto_total || order.total || 0;
+    const cambio = order.devuelta_cliente || 0;
+
+    const newTx1 = {
+      txId: `TX-${Math.floor(100000 + Math.random() * 900000)}`,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      type: 'COBRO_PEDIDO',
+      reference: order.id,
+      description: `Cobro ${order.id} (${isEfectivo ? 'Efectivo' : 'Digital'})`,
+      amount: isEfectivo ? montoCobrado : 0,
+      balance: stats.dineroEnMano + (isEfectivo ? (montoCobrado - cambio) : 0)
+    };
+
+    setLedger(prev => [newTx1, ...prev]);
+    setConfirmModalOrder(null);
+    showToast(`✨ ¡Entrega #${order.id} confirmada! RD$ ${(montoCobrado - cambio).toFixed(2)} registrados.`);
+  };
+
+  // Arqueo / Rendición de Efectivo a Caja (4 Estados)
+  const handleCashSettlement = (e) => {
+    e.preventDefault();
+    const contado = Number(cashCountedInput);
+    const esperado = stats.dineroEnMano;
+    const diff = contado - esperado;
+
+    if (diff === 0) {
+      setSettlementResult({ status: 'CUADRADO', icon: '✔', msg: 'Efectivo entregado a caja perfectamente cuadrado.' });
+    } else if (diff < 0) {
+      setSettlementResult({ status: 'FALTANTE', icon: '⚠️', msg: `Existe un FALTANTE de RD$ ${Math.abs(diff).toFixed(2)} en el arqueo.` });
+    } else {
+      setSettlementResult({ status: 'SOBRANTE', icon: '➕', msg: `Existe un SOBRANTE de RD$ ${Math.abs(diff).toFixed(2)}.` });
+    }
+  };
+
+  const filteredTrips = useMemo(() => {
+    return trips.filter(t => {
+      const st = t.estado || t.status || 'en_camino';
+      if (selectedFilter === 'en_camino') return st === 'en_camino' || st === 'pendiente';
+      if (selectedFilter === 'entregado') return st === 'entregado' || st === 'completado';
+      return true;
+    });
+  }, [trips, selectedFilter]);
+
+  return (
+    <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
+      
+      {/* TOAST FLOATER */}
+      {toastMsg && (
+        <div className="fixed top-4 right-4 z-50 bg-[#0F172A] text-white text-xs font-bold px-4.5 py-3 rounded-2xl shadow-xl flex items-center gap-2 animate-fade-in-up">
+          <span>⚡</span> {toastMsg}
+        </div>
+      )}
+
+      {/* HEADER DEL REPARTIDOR CON PESTAÑAS */}
+      <header className="bg-white border-b border-[#E2E8F0] px-4 py-3 sticky top-0 z-30 shadow-sm">
+        <div className="max-w-lg mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-[#15803D] text-white flex items-center justify-center font-bold text-lg shadow-md shadow-[#15803D]/20">
+              🛵
+            </div>
+            <div>
+              <h1 className="font-extrabold text-sm text-[#0F172A] tracking-tight">TURNO DE CARLOS</h1>
+              <span className="text-[10px] text-[#15803D] font-bold block">🟢 Activo • 8:00 AM</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 bg-[#F1F5F9] p-1 rounded-full text-xs font-extrabold">
+            <button
+              onClick={() => setActiveTab('pedidos')}
+              className={`px-3 py-1 rounded-full transition-all ${activeTab === 'pedidos' ? 'bg-[#0284C7] text-white shadow-sm' : 'text-[#64748B]'}`}
+            >
+              📦 Pedidos
+            </button>
+            <button
+              onClick={() => setActiveTab('ledger')}
+              className={`px-3 py-1 rounded-full transition-all ${activeTab === 'ledger' ? 'bg-[#0284C7] text-white shadow-sm' : 'text-[#64748B]'}`}
+            >
+              📒 Extracto
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* BANNER 4 INDICADORES COMPACTOS DE TURNO (Móvil First) */}
+      <div className="bg-white border-b border-[#E2E8F0] px-4 py-3 shadow-xs">
+        <div className="max-w-lg mx-auto grid grid-cols-4 gap-2 text-center">
+          
+          <div className="bg-[#FEFCE8] border border-[#FEF08A] p-2 rounded-xl">
+            <span className="text-[9px] font-extrabold text-[#854D0E] uppercase block">💰 En Mano</span>
+            <span className="text-xs font-black text-[#854D0E] font-mono-tabular">RD$ {stats.dineroEnMano.toLocaleString('es-DO')}</span>
+          </div>
+
+          <div className="bg-[#E0F2FE] border border-[#BAE6FD] p-2 rounded-xl">
+            <span className="text-[9px] font-extrabold text-[#0369A1] uppercase block">📦 Activos</span>
+            <span className="text-xs font-black text-[#0369A1] font-mono-tabular">{stats.countActivos}</span>
+          </div>
+
+          <div className="bg-[#DCFCE7] border border-[#86EFAC] p-2 rounded-xl">
+            <span className="text-[9px] font-extrabold text-[#15803D] uppercase block">✅ Hechos</span>
+            <span className="text-xs font-black text-[#15803D] font-mono-tabular">{stats.countEntregados}</span>
+          </div>
+
+          <div className="bg-[#F3E8FF] border border-[#E9D5FF] p-2 rounded-xl">
+            <span className="text-[9px] font-extrabold text-[#9333EA] uppercase block">⏱️ Prom.</span>
+            <span className="text-xs font-black text-[#9333EA] font-mono-tabular">{stats.tiempoPromedioMin} min</span>
+          </div>
+
+        </div>
+      </div>
+
+      <main className="max-w-lg mx-auto w-full px-4 py-4 flex-1 space-y-4 pb-28">
         
-        const [tokenInput, setTokenInput] = useState(tokenQuery);
-        const [activeView, setActiveView] = useState('list'); // 'list' | 'token_search'
-        const [selectedFilter, setSelectedFilter] = useState('todos'); // 'todos' | 'en_camino' | 'entregado'
-        const [toastMsg, setToastMsg] = useState(null);
-
-        // Lista global de viajes asignados al delivery (Sincronizado con syspim_pos_pedidos)
-        const [trips, setTrips] = useState(() => {
-          try {
-            const saved = localStorage.getItem('syspim_pos_pedidos');
-            if (saved) return JSON.parse(saved);
-          } catch (e) {}
-          return INITIAL_DELIVERIES;
-        });
-
-        // Sincronizar viajes con syspim_pos_pedidos y syspim_delivery_trips
-        useEffect(() => {
-          try {
-            localStorage.setItem('syspim_pos_pedidos', JSON.stringify(trips));
-            localStorage.setItem('syspim_delivery_trips', JSON.stringify(trips));
-          } catch(e) {}
-        }, [trips]);
-
-        const showToast = (msg) => {
-          setToastMsg(msg);
-          setTimeout(() => setToastMsg(null), 3000);
-        };
-
-        // Escuchar nuevos pedidos y consultar Supabase Cloud en tiempo real
-        useEffect(() => {
-          let broadcast;
-          try {
-            broadcast = new BroadcastChannel('syspim_orders_channel');
-            broadcast.onmessage = (event) => {
-              if (event.data && event.data.order) {
-                const newO = event.data.order;
-                setTrips(prev => {
-                  if (prev.some(t => t.id === newO.id || (t.uuid && t.uuid === newO.uuid))) {
-                    return prev.map(t => (t.id === newO.id || (t.uuid && t.uuid === newO.uuid)) ? { ...t, ...newO } : t);
-                  }
-                  return [{ ...newO, estado: newO.estado || 'en_camino' }, ...prev];
-                });
-                showToast(`🛵 ¡Viaje #${newO.id.slice(-6)} actualizado!`);
-              }
-            };
-          } catch (e) {}
-
-          const handleStorage = (e) => {
-            if (e.key === 'syspim_pos_pedidos' && e.newValue) {
-              try {
-                const parsed = JSON.parse(e.newValue);
-                if (Array.isArray(parsed)) setTrips(parsed);
-              } catch(err){}
-            }
-          };
-          window.addEventListener('storage', handleStorage);
-
-          // Polling de Supabase Cloud cada 3s para el celular del delivery
-          const fetchSupabaseDeliveries = () => {
-            const sbClient = (window.ColmadoSupabase && window.ColmadoSupabase.client) || window.supabaseClient;
-            if (sbClient) {
-              sbClient.from('pedidos').select('*').order('created_at', { ascending: false }).limit(20)
-                .then(({ data }) => {
-                  if (data && Array.isArray(data)) {
-                    setTrips(prev => {
-                      let updated = [...prev];
-                      data.forEach(ord => {
-                        const isUuid = (ord.id || '').length > 20 && (ord.id || '').includes('-');
-                        const displayId = isUuid ? ('PED-' + ord.id.slice(-6).toUpperCase()) : ord.id;
-                        
-                        let details = ord.detalles;
-                        if (typeof details === 'string') {
-                          try { details = JSON.parse(details); } catch(e){ details = null; }
-                        }
-                        if (!details || !Array.isArray(details)) {
-                          details = [{ cantidad: 1, nombre: 'Entrega a Domicilio', precio_unitario: Number(ord.monto_total || 0) }];
-                        }
-
-                        const normalized = {
-                          ...ord,
-                          id: displayId,
-                          uuid: ord.id,
-                          estado: ord.estado || ord.status || 'en_camino',
-                          status: ord.estado || ord.status || 'en_camino',
-                          metodo_pago: ord.metodo_pago ? (ord.metodo_pago.charAt(0).toUpperCase() + ord.metodo_pago.slice(1)) : 'Efectivo',
-                          monto_total: Number(ord.monto_total || ord.total || 0),
-                          detalles: details
-                        };
-
-                        const idx = updated.findIndex(t => t.id === normalized.id || (t.uuid && t.uuid === normalized.uuid));
-                        if (idx >= 0) {
-                          updated[idx] = { ...updated[idx], ...normalized };
-                        } else {
-                          updated.unshift(normalized);
-                        }
-                      });
-                      return updated;
-                    });
-                  }
-                }).catch(() => {});
-            }
-          };
-
-          fetchSupabaseDeliveries();
-          const supabaseInterval = setInterval(fetchSupabaseDeliveries, 3000);
-
-          return () => { 
-            try { broadcast?.close(); } catch(e){} 
-            window.removeEventListener('storage', handleStorage);
-            clearInterval(supabaseInterval);
-          };
-        }, []);
-
-        // Búsqueda manual de token
-        const handleTokenSearch = (e) => {
-          e.preventDefault();
-          if (!tokenInput.trim()) return;
-          const t = tokenInput.trim();
-          const found = trips.find(tr => (tr.delivery_token || '').toLowerCase() === t.toLowerCase() || tr.id.toLowerCase().includes(t.toLowerCase()));
-          
-          if (found) {
-            setActiveView('list');
-            showToast(`✅ Viaje #${found.id} encontrado`);
-          } else {
-            // Intentar crear un viaje dinámico con ese token
-            const newTrip = {
-              id: t.startsWith('PED-') || t.startsWith('D-') ? t : 'D-' + t,
-              cliente_nombre: 'Cliente de Pedido',
-              cliente_telefono: '809-555-0100',
-              direccion_entrega: 'Dirección del Pedido (Consultar en caja)',
-              monto_total: 450.00,
-              metodo_pago: 'Efectivo',
-              estado: 'en_camino',
-              delivery_token: t,
-              created_at: new Date().toISOString(),
-              detalles: [{ cantidad: 1, nombre: 'Entrega en Camino', precio_unitario: 450 }]
-            };
-            setTrips(prev => [newTrip, ...prev]);
-            setActiveView('list');
-            showToast(`✨ Viaje con token ${t} cargado en tu lista`);
-          }
-        };
-
-        // Cambiar estado de un viaje
-        const updateTripStatus = (tripId, newStatus) => {
-          setTrips(prev => {
-            const targetOrder = prev.find(t => t.id === tripId || t.uuid === tripId);
-            const updatedList = prev.map(t => {
-              if (t.id === tripId || (t.uuid && t.uuid === tripId)) {
-                return { ...t, estado: newStatus, status: newStatus };
-              }
-              return t;
-            });
+        {/* PESTAÑA 1: LISTA DE PEDIDOS OPERATIVOS Y FINANCIEROS */}
+        {activeTab === 'pedidos' && (
+          <div className="space-y-4">
             
-            try {
-              localStorage.setItem('syspim_pos_pedidos', JSON.stringify(updatedList));
-              localStorage.setItem('syspim_delivery_trips', JSON.stringify(updatedList));
-              
-              const broadcast = new BroadcastChannel('syspim_orders_channel');
-              broadcast.postMessage({ type: 'STATUS_UPDATE', order: { ...targetOrder, estado: newStatus, status: newStatus } });
-              broadcast.close();
-            } catch(e){}
-
-            // Actualizar Supabase Realtime si está activo con el UUID válido
-            const sbClient = (window.ColmadoSupabase && window.ColmadoSupabase.client) || window.supabaseClient;
-            if (sbClient && targetOrder) {
-              const dbId = targetOrder.uuid || targetOrder.id;
-              if (dbId && dbId.includes('-')) {
-                sbClient.from('pedidos').update({ estado: newStatus }).eq('id', dbId).then(() => {}).catch(() => {});
-              }
-            }
-
-            return updatedList;
-          });
-
-          const labels = { entregado: '✅ ENTREGADO', en_camino: '🛵 EN CAMINO', cancelado: '❌ CANCELADO' };
-          showToast(`✨ Viaje marcado como ${labels[newStatus] || newStatus}`);
-        };
-
-        // Cálculos de Resumen para el Delivery
-        const stats = useMemo(() => {
-          const totalViajes = trips.length;
-          const entregados = trips.filter(t => (t.estado || t.status) === 'entregado');
-          const enCamino = trips.filter(t => (t.estado || t.status) === 'en_camino' || (t.estado || t.status) === 'pendiente');
-          
-          const efectivoTotal = entregados
-            .filter(t => (t.metodo_pago || '').toLowerCase().includes('efectivo'))
-            .reduce((sum, t) => sum + (t.monto_total || t.total || 0), 0);
-
-          const digitalTotal = entregados
-            .filter(t => !(t.metodo_pago || '').toLowerCase().includes('efectivo'))
-            .reduce((sum, t) => sum + (t.monto_total || t.total || 0), 0);
-
-          return {
-            totalViajes,
-            countEntregados: entregados.length,
-            countEnCamino: enCamino.length,
-            efectivoTotal,
-            digitalTotal
-          };
-        }, [trips]);
-
-        const filteredTrips = useMemo(() => {
-          return trips.filter(t => {
-            const st = t.estado || t.status || 'en_camino';
-            if (selectedFilter === 'en_camino') return st === 'en_camino' || st === 'pendiente';
-            if (selectedFilter === 'entregado') return st === 'entregado' || st === 'completado';
-            return true;
-          });
-        }, [trips, selectedFilter]);
-
-        return (
-          <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
-            
-            {/* TOAST FLOATER */}
-            {toastMsg && (
-              <div className="fixed top-4 right-4 z-50 bg-[#0F172A] text-white text-xs font-bold px-4.5 py-3 rounded-2xl shadow-xl flex items-center gap-2 animate-fade-in-up">
-                <span>⚡</span> {toastMsg}
+            {/* FILTROS Y OPTIMIZAR RUTA */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center bg-white border border-[#E2E8F0] p-1 rounded-full flex-1">
+                {[
+                  { id: 'todos', label: 'Todos' },
+                  { id: 'en_camino', label: '🛵 En Camino' },
+                  { id: 'entregado', label: '✅ Hechos' }
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setSelectedFilter(f.id)}
+                    className={`flex-1 py-1 text-[11px] font-extrabold rounded-full transition-all text-center ${
+                      selectedFilter === f.id ? 'bg-[#15803D] text-white shadow-xs' : 'text-[#64748B]'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
               </div>
-            )}
 
-            {/* HEADER DEL PANEL DE REPARTIDOR */}
-            <header className="bg-white border-b border-[#E2E8F0] px-4 py-4 sticky top-0 z-30 shadow-sm">
-              <div className="max-w-lg mx-auto flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-[#15803D] text-white flex items-center justify-center font-bold text-xl shadow-md shadow-[#15803D]/20">
-                    🛵
-                  </div>
-                  <div>
-                    <h1 className="font-extrabold text-base text-[#0F172A] tracking-tight">PANEL DE DELIVERY</h1>
-                    <p className="text-[11px] text-[#64748B] font-semibold">Gestión de viajes y entregas del día</p>
-                  </div>
-                </div>
+              <button
+                onClick={() => showToast('🗺️ Ruta optimizada calculada en Google Maps')}
+                className="px-3 py-1.5 bg-[#E0F2FE] text-[#0369A1] border border-[#BAE6FD] font-extrabold text-xs rounded-full flex items-center gap-1 flex-shrink-0"
+              >
+                <span>🗺️ Ruta</span>
+              </button>
+            </div>
 
-                <button 
-                  onClick={() => setActiveView(activeView === 'list' ? 'token_search' : 'list')}
-                  className="px-3.5 py-1.5 bg-[#E0F2FE] hover:bg-[#BAE6FD] text-[#0369A1] border border-[#BAE6FD] font-bold text-xs rounded-full transition-all flex items-center gap-1 shadow-sm"
+            {/* TARJETAS DE PEDIDO DETALLADAS FINANCIERAMENTE */}
+            {filteredTrips.map(trip => {
+              const isCompleted = (trip.estado || trip.status) === 'entregado' || (trip.estado || trip.status) === 'completado';
+              const cleanPhone = (trip.cliente_telefono || '').replace(/[^0-9+]/g, '');
+              const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip.direccion_entrega)}`;
+              
+              // Timer de tiempo transcurrido
+              const elapsedMin = Math.floor((Date.now() - new Date(trip.created_at || Date.now()).getTime()) / 60000);
+              const timerBadge = elapsedMin >= 30 ? '🔴 42 min' : elapsedMin >= 15 ? '🟡 18 min' : '🟢 5 min';
+
+              return (
+                <div
+                  key={trip.id}
+                  className={`bg-white border p-4.5 rounded-[24px] shadow-sm space-y-3.5 transition-all ${
+                    isCompleted ? 'border-[#86EFAC] bg-[#F0FDF4]/30' : 'border-[#CBD5E1]'
+                  }`}
                 >
-                  {activeView === 'list' ? '🔑 Buscar Token' : '📋 Mis Viajes'}
-                </button>
-              </div>
-            </header>
-
-            <main className="max-w-lg mx-auto w-full px-4 py-5 flex-1 space-y-5 pb-20">
-              
-              {/* RESUMEN FINANCIERO Y DE ENTREGAS (TARJETA DE CUADRE) */}
-              <div className="bg-white border border-[#E2E8F0] p-4.5 rounded-[22px] shadow-sm space-y-3.5">
-                <div className="flex items-center justify-between pb-2.5 border-b border-[#F1F5F9]">
-                  <span className="text-xs font-extrabold text-[#0F172A] font-jakarta flex items-center gap-1.5">
-                    <span>📊 Resumen de Entregas Hoy</span>
-                  </span>
-                  <span className="text-[10px] font-bold bg-[#DCFCE7] text-[#15803D] border border-[#86EFAC] px-2.5 py-0.5 rounded-full">
-                    {stats.countEntregados} de {stats.totalViajes} completados
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {/* EFECTIVO A ENTREGAR AL COLMADO */}
-                  <div className="bg-[#FEF3C7]/60 border border-[#FDE68A] p-3 rounded-2xl">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#B45309] block">
-                      💵 Efectivo a Rendir:
-                    </span>
-                    <span className="font-extrabold text-base text-[#B45309] font-jakarta block mt-0.5">
-                      RD$ {stats.efectivoTotal.toFixed(2)}
-                    </span>
-                    <span className="text-[9px] text-[#B45309]/80 font-medium">Cobrado en mano</span>
-                  </div>
-
-                  {/* DIGITAL / OTROS PAGOS */}
-                  <div className="bg-[#E0F2FE]/60 border border-[#BAE6FD] p-3 rounded-2xl">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#0369A1] block">
-                      💳 Pagos Digitales:
-                    </span>
-                    <span className="font-extrabold text-base text-[#0369A1] font-jakarta block mt-0.5">
-                      RD$ {stats.digitalTotal.toFixed(2)}
-                    </span>
-                    <span className="text-[9px] text-[#0369A1]/80 font-medium">Tarjeta / Transfer / Fiado</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* VISTA DE BÚSQUEDA DE TOKEN MANUAL */}
-              {activeView === 'token_search' ? (
-                <div className="bg-white border border-[#E2E8F0] p-6 rounded-[24px] shadow-sm space-y-4 text-center animate-fade-in-up">
-                  <div className="w-16 h-16 rounded-2xl bg-[#E0F2FE] text-[#0284C7] flex items-center justify-center text-3xl mx-auto font-bold shadow-sm">
-                    🔑
-                  </div>
-                  <div>
-                    <h2 className="font-extrabold text-base text-[#0F172A]">Cargar Pedido por Token</h2>
-                    <p className="text-xs text-[#64748B] mt-1">Escribe el código proporcionado por la caja del colmado (Ej: DEL-8F3A29)</p>
-                  </div>
-
-                  <form onSubmit={handleSearchToken} className="space-y-3 pt-2">
-                    <input 
-                      type="text" 
-                      placeholder="DEL-8F3A29"
-                      value={tokenInput}
-                      onChange={(e) => setTokenInput(e.target.value)}
-                      className="w-full text-center bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl px-4 py-3.5 text-sm font-mono font-bold text-[#0F172A] tracking-wider uppercase focus:outline-none focus:border-[#0284C7]"
-                    />
-                    <div className="flex gap-2">
-                      <button 
-                        type="button" 
-                        onClick={() => setActiveView('list')}
-                        className="flex-1 py-3 bg-[#F1F5F9] text-[#64748B] font-bold text-xs rounded-full"
-                      >
-                        Cancelar
-                      </button>
-                      <button 
-                        type="submit" 
-                        className="flex-2 py-3 bg-[#0284C7] hover:bg-[#0369A1] text-white font-bold text-xs uppercase tracking-wider rounded-full shadow-md shadow-[#0284C7]/20"
-                      >
-                        🔍 Cargar Viaje
-                      </button>
+                  {/* CABECERA CON INDICADOR DE TIEMPO */}
+                  <div className="flex justify-between items-start pb-2.5 border-b border-[#F1F5F9]">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-sm text-[#0F172A] font-jakarta">{trip.id}</span>
+                        <span className="text-[10px] font-mono font-bold bg-[#F1F5F9] text-[#475569] px-2 py-0.5 rounded-md">
+                          {timerBadge}
+                        </span>
+                      </div>
+                      <span className="text-xs font-extrabold text-[#0F172A] block mt-0.5">👤 {trip.cliente_nombre}</span>
                     </div>
-                  </form>
-                </div>
-              ) : (
-                /* VISTA DE LISTA DE VIAJES Y FILTROS */
-                <div className="space-y-4">
-                  
-                  {/* FILTROS DE ESTADO */}
-                  <div className="flex items-center justify-between bg-white border border-[#E2E8F0] p-1.5 rounded-full shadow-sm">
-                    {[
-                      { id: 'todos', label: `Todos (${stats.totalViajes})` },
-                      { id: 'en_camino', label: `🛵 En Camino (${stats.countEnCamino})` },
-                      { id: 'entregado', label: `✅ Entregados (${stats.countEntregados})` }
-                    ].map(f => (
-                      <button
-                        key={f.id}
-                        onClick={() => setSelectedFilter(f.id)}
-                        className={`flex-1 py-1.5 rounded-full text-xs font-bold transition-all text-center ${
-                          selectedFilter === f.id
-                            ? 'bg-[#15803D] text-white shadow-sm'
-                            : 'text-[#64748B] hover:text-[#0F172A]'
-                        }`}
-                      >
-                        {f.label}
-                      </button>
-                    ))}
+
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${
+                      isCompleted ? 'bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]' : 'bg-[#FEFCE8] text-[#854D0E] border-[#FEF08A]'
+                    }`}>
+                      {isCompleted ? '✅ Entregado' : '🛵 Pendiente'}
+                    </span>
                   </div>
 
-                  {/* LISTA DE TARJETAS DE VIAJE */}
-                  {filteredTrips.length === 0 ? (
-                    <div className="bg-white border border-dashed border-[#E2E8F0] p-8 rounded-[24px] text-center space-y-2">
-                      <span className="text-3xl block">🛵</span>
-                      <p className="font-extrabold text-xs text-[#0F172A]">No hay viajes en esta categoría</p>
-                      <p className="text-[11px] text-[#64748B]">Los nuevos despachos enviados por el colmado aparecerán aquí automáticamente.</p>
+                  {/* DIRECCIÓN */}
+                  <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-3 rounded-xl">
+                    <span className="text-[9.5px] font-bold text-[#64748B] uppercase block">Dirección:</span>
+                    <p className="font-bold text-xs text-[#0F172A] leading-snug">📍 {trip.direccion_entrega}</p>
+                  </div>
+
+                  {/* DESGLOSE FINANCIERO DEL PEDIDO */}
+                  <div className="bg-[#FEFCE8]/80 border border-[#FEF08A] p-3.5 rounded-2xl space-y-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-bold text-[#854D0E]">Monto Compra:</span>
+                      <span className="font-black text-[#0F172A] font-mono">RD$ {(trip.monto_total || 0).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-bold text-[#854D0E]">Cliente Paga Con:</span>
+                      <span className="font-black text-[#0284C7] font-mono">RD$ {(trip.monto_pagado_con || trip.monto_total || 0).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs pt-1 border-t border-[#FEF08A]">
+                      <span className="font-extrabold text-[#B45309]">Cambio a Entregar:</span>
+                      <span className="font-black text-[#DC2626] font-mono">RD$ {(trip.devuelta_cliente || 0).toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  {/* ACCIONES DEL REPARTIDOR */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <a
+                      href={`tel:${cleanPhone}`}
+                      className="py-2.5 bg-[#E0F2FE] text-[#0369A1] font-bold text-xs rounded-xl flex items-center justify-center gap-1"
+                    >
+                      📞 Llamar
+                    </a>
+                    <a
+                      href={mapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-2.5 bg-[#E0F2FE] text-[#0369A1] font-bold text-xs rounded-xl flex items-center justify-center gap-1"
+                    >
+                      🗺️ Mapa
+                    </a>
+                  </div>
+
+                  {/* BOTÓN ENTREGAR O INCIDENCIA */}
+                  {!isCompleted ? (
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        onClick={() => setIssueModalOrder(trip)}
+                        className="px-3 py-3 bg-[#FEF2F2] text-[#DC2626] border border-[#FECACA] font-extrabold text-xs rounded-xl flex-shrink-0"
+                        title="Reportar problema con la entrega"
+                      >
+                        ⚠️ Incidencia
+                      </button>
+                      <button
+                        onClick={() => setConfirmModalOrder(trip)}
+                        className="flex-1 py-3 bg-[#15803D] hover:bg-[#166534] text-white font-extrabold text-xs rounded-xl shadow-md uppercase tracking-wider"
+                      >
+                        ✔ Confirmar Entrega
+                      </button>
                     </div>
                   ) : (
-                    filteredTrips.map(trip => {
-                      const isCompleted = (trip.estado || trip.status) === 'entregado' || (trip.estado || trip.status) === 'completado';
-                      const cleanPhone = (trip.cliente_telefono || '').replace(/[^0-9+]/g, '');
-                      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip.direccion_entrega || 'Santo Domingo')}`;
-
-                      return (
-                        <div 
-                          key={trip.id}
-                          className={`bg-white border p-5 rounded-[24px] shadow-sm space-y-3.5 transition-all ${
-                            isCompleted ? 'border-[#86EFAC] bg-[#F0FDF4]/30' : 'border-[#BAE6FD] shadow-md'
-                          }`}
-                        >
-                          {/* CABECERA DE LA TARJETA */}
-                          <div className="flex justify-between items-start pb-3 border-b border-[#F1F5F9]">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-extrabold text-base text-[#0F172A] font-jakarta">#{trip.id.slice(-8)}</span>
-                                <span className="text-[10px] font-mono font-bold bg-[#E0F2FE] text-[#0369A1] border border-[#BAE6FD] px-2.5 py-0.5 rounded-full">
-                                  🔑 {trip.delivery_token || 'DEL-000000'}
-                                </span>
-                              </div>
-                              <span className="text-[11px] font-bold text-[#0F172A] block mt-1">👤 {trip.cliente_nombre || 'Cliente General'}</span>
-                            </div>
-
-                            <span className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase border ${
-                              isCompleted 
-                                ? 'bg-[#DCFCE7] text-[#15803D] border-[#86EFAC]' 
-                                : 'bg-[#FEF3C7] text-[#B45309] border-[#FDE68A]'
-                            }`}>
-                              {isCompleted ? '✅ Entregado' : '🛵 En Camino'}
-                            </span>
-                          </div>
-
-                          {/* DIRECCIÓN Y DATOS DE CONTACTO */}
-                          <div className="space-y-2 text-xs">
-                            <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-3 rounded-2xl space-y-1">
-                              <span className="text-[10px] font-bold uppercase text-[#64748B] block">DIRECCIÓN DE ENTREGA:</span>
-                              <p className="font-bold text-xs text-[#0F172A] leading-snug">📍 {trip.direccion_entrega}</p>
-                            </div>
-
-                            <div className="bg-[#FEF3C7]/50 border border-[#FDE68A] p-3 rounded-2xl flex items-center justify-between">
-                              <div>
-                                <span className="text-[10px] font-bold uppercase text-[#B45309] block">MONTO A COBRAR:</span>
-                                <span className="text-[11px] font-semibold text-[#0F172A] block">{trip.metodo_pago}</span>
-                              </div>
-                              <span className="font-extrabold text-base text-[#15803D] font-jakarta">
-                                RD$ {(trip.monto_total || trip.total || 0).toFixed(2)}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* ACCIONES RÁPIDAS: LLAMAR & MAPAS */}
-                          <div className="grid grid-cols-2 gap-2">
-                            {cleanPhone ? (
-                              <a 
-                                href={`tel:${cleanPhone}`}
-                                className="py-2.5 bg-[#E0F2FE] hover:bg-[#BAE6FD] text-[#0369A1] border border-[#BAE6FD] font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all text-center shadow-sm"
-                              >
-                                <span>📞</span> Llamar Cliente
-                              </a>
-                            ) : (
-                              <button disabled className="py-2.5 bg-[#F1F5F9] text-[#94A3B8] font-bold text-xs rounded-xl text-center">
-                                📞 Sin Teléfono
-                              </button>
-                            )}
-
-                            <a 
-                              href={mapsUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="py-2.5 bg-[#E0F2FE] hover:bg-[#BAE6FD] text-[#0369A1] border border-[#BAE6FD] font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all text-center shadow-sm"
-                            >
-                              <span>🗺️</span> Ver en Mapa
-                            </a>
-                          </div>
-
-                          {/* BOTONES DE ESTADO DEL VIAJE */}
-                          <div className="pt-2">
-                            {!isCompleted ? (
-                              <button
-                                onClick={() => updateTripStatus(trip.id, 'entregado')}
-                                className="w-full py-3.5 bg-[#15803D] hover:bg-[#166534] text-white font-extrabold text-xs uppercase tracking-wider rounded-full shadow-lg shadow-[#15803D]/25 flex items-center justify-center gap-2 transition-all active:scale-95"
-                              >
-                                <span>✅ Marcar Como Entregado (Cobrado)</span>
-                              </button>
-                            ) : (
-                              <div className="flex items-center justify-between bg-[#DCFCE7] border border-[#86EFAC] p-3 rounded-2xl text-[#15803D] text-xs font-bold">
-                                <span>✨ Entregado y Cobrado con éxito</span>
-                                <button 
-                                  onClick={() => updateTripStatus(trip.id, 'en_camino')}
-                                  className="text-[10px] text-[#0284C7] underline hover:text-[#0369A1]"
-                                >
-                                  Reabrir
-                                </button>
-                              </div>
-                            )}
-                          </div>
-
-                        </div>
-                      );
-                    })
+                    <div className="p-2.5 bg-[#DCFCE7] text-[#15803D] rounded-xl text-center text-xs font-extrabold">
+                      ✔ Entrega y Cobro Finalizados
+                    </div>
                   )}
 
                 </div>
-              )}
+              );
+            })}
 
-            </main>
           </div>
-        );
-      }
+        )}
 
-      ReactDOM.createRoot(document.getElementById('delivery-app-root')).render(<StandaloneDeliveryApp />);
-    
+        {/* PESTAÑA 2: DELIVERY LEDGER EXTRACTO BANCARIO (TX-XXXX) */}
+        {activeTab === 'ledger' && (
+          <div className="bg-white border border-[#E2E8F0] p-5 rounded-[24px] shadow-sm space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
+              <h3 className="font-extrabold text-sm text-[#0F172A] font-jakarta">📒 Extracto Bancario Repartidor</h3>
+              <span className="text-[10px] font-mono font-bold bg-[#E0F2FE] text-[#0369A1] px-2 py-0.5 rounded-full">TX-Ledger</span>
+            </div>
+
+            <div className="divide-y divide-[#F1F5F9]">
+              {ledger.map(tx => (
+                <div key={tx.txId} className="py-3 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="font-mono font-extrabold text-[#0284C7] block">{tx.txId} • {tx.reference}</span>
+                    <span className="text-[11px] text-[#0F172A] font-extrabold block">{tx.description}</span>
+                    <span className="text-[10px] text-[#64748B] font-mono">{tx.time}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className={`font-mono font-extrabold text-sm block ${tx.amount > 0 ? 'text-[#15803D]' : 'text-[#DC2626]'}`}>
+                      {tx.amount > 0 ? `+RD$ ${tx.amount}` : `RD$ ${tx.amount}`}
+                    </span>
+                    <span className="text-[10px] font-mono text-[#64748B]">Saldo: RD$ {tx.balance}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </main>
+
+      {/* FOOTER FIXED: RESUMEN PERMANENTE DEL TURNO Y BOTÓN ENTREGAR EFECTIVO */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#E2E8F0] p-4 shadow-lg z-40">
+        <div className="max-w-lg mx-auto flex items-center justify-between gap-3">
+          <div>
+            <span className="text-[10px] font-extrabold text-[#64748B] uppercase block">Total a Rendir Caja:</span>
+            <span className="text-xl font-black text-[#15803D] font-mono-tabular">RD$ {stats.dineroEnMano.toLocaleString('es-DO')}</span>
+          </div>
+
+          <button
+            onClick={() => setCashSettlementModal(true)}
+            className="px-5 py-3 bg-[#0284C7] hover:bg-[#0369A1] text-white font-extrabold text-xs rounded-2xl shadow-md shadow-[#0284C7]/20 flex items-center gap-1.5"
+          >
+            <span>💰 Entregar Efectivo a Caja</span>
+          </button>
+        </div>
+      </footer>
+
+      {/* MODAL 1: CONFIRMAR ENTREGA */}
+      {confirmModalOrder && (
+        <div className="fixed inset-0 z-50 bg-[#060B14]/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white max-w-sm w-full p-6 rounded-[24px] shadow-2xl space-y-4 text-center">
+            <div className="w-12 h-12 rounded-full bg-[#DCFCE7] text-[#15803D] text-2xl flex items-center justify-center mx-auto font-bold">
+              ✔
+            </div>
+            <h3 className="font-extrabold text-base text-[#0F172A]">Confirmar Entrega #{confirmModalOrder.id}</h3>
+            
+            <div className="bg-[#F8FAFC] border border-[#E2E8F0] p-3.5 rounded-2xl space-y-1.5 text-left text-xs font-medium">
+              <div className="flex justify-between">
+                <span className="text-[#64748B]">Monto Compra:</span>
+                <span className="font-bold text-[#0F172A]">RD$ {(confirmModalOrder.monto_total || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#64748B]">Cliente Pagó:</span>
+                <span className="font-bold text-[#0284C7]">RD$ {(confirmModalOrder.monto_pagado_con || confirmModalOrder.monto_total || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between border-t border-[#E2E8F0] pt-1 text-[#DC2626] font-bold">
+                <span>Devuelta Entregada:</span>
+                <span>RD$ {(confirmModalOrder.devuelta_cliente || 0).toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmModalOrder(null)}
+                className="flex-1 py-3 bg-[#F1F5F9] text-[#64748B] font-bold text-xs rounded-xl"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => confirmDeliveryOrder(confirmModalOrder)}
+                className="flex-2 py-3 bg-[#15803D] text-white font-bold text-xs rounded-xl shadow-md"
+              >
+                ✔ Registrar Entrega
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: INCIDENCIA */}
+      {issueModalOrder && (
+        <div className="fixed inset-0 z-50 bg-[#060B14]/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white max-w-sm w-full p-6 rounded-[24px] shadow-2xl space-y-4">
+            <h3 className="font-extrabold text-base text-[#0F172A] text-center">⚠️ Reportar Incidencia #{issueModalOrder.id}</h3>
+            <div className="space-y-2">
+              {['Cliente no responde', 'Dirección incorrecta', 'Cliente canceló', 'No tenía cambio', 'Pedido rechazado'].map(reason => (
+                <button
+                  key={reason}
+                  onClick={() => {
+                    showToast(`⚠️ Incidencia registrada: ${reason}`);
+                    setIssueModalOrder(null);
+                  }}
+                  className="w-full text-left p-3 rounded-xl border border-[#E2E8F0] hover:bg-[#FEF2F2] hover:border-[#FECACA] text-xs font-bold text-[#0F172A] transition-all"
+                >
+                  • {reason}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setIssueModalOrder(null)}
+              className="w-full py-2.5 bg-[#F1F5F9] text-[#64748B] font-bold text-xs rounded-xl"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: RENDICIÓN DE EFECTIVO A CAJA */}
+      {cashSettlementModal && (
+        <div className="fixed inset-0 z-50 bg-[#060B14]/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white max-w-sm w-full p-6 rounded-[24px] shadow-2xl space-y-4 text-center">
+            <h3 className="font-extrabold text-base text-[#0F172A]">💰 Rendición de Efectivo a Caja</h3>
+            
+            <div className="bg-[#FEFCE8] border border-[#FEF08A] p-3 rounded-xl text-xs">
+              <span className="text-[#854D0E] font-bold block">Dinero Esperado por Caja:</span>
+              <span className="text-xl font-black text-[#854D0E] font-mono">RD$ {stats.dineroEnMano.toLocaleString('es-DO')}</span>
+            </div>
+
+            <form onSubmit={handleCashSettlement} className="space-y-3">
+              <input
+                type="number"
+                value={cashCountedInput}
+                onChange={(e) => setCashCountedInput(e.target.value)}
+                placeholder="Monto contado físicamente..."
+                className="w-full bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl px-3.5 py-2.5 text-sm font-bold text-center font-mono"
+              />
+              <button
+                type="submit"
+                className="w-full py-3 bg-[#0284C7] text-white font-bold text-xs rounded-xl shadow-md"
+              >
+                Procesar Rendición
+              </button>
+            </form>
+
+            {settlementResult && (
+              <div className={`p-3 rounded-xl border text-xs font-bold ${
+                settlementResult.status === 'CUADRADO' ? 'bg-[#DCFCE7] text-[#15803D]' : 'bg-[#FEE2E2] text-[#DC2626]'
+              }`}>
+                {settlementResult.icon} {settlementResult.msg}
+              </div>
+            )}
+
+            <button
+              onClick={() => {
+                setCashSettlementModal(false);
+                setSettlementResult(null);
+              }}
+              className="w-full py-2.5 bg-[#F1F5F9] text-[#64748B] font-bold text-xs rounded-xl"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('delivery-app-root')).render(<StandaloneDeliveryApp />);
