@@ -986,6 +986,68 @@ function App() {
     }
     return 't-001';
   });
+
+  // Estado Realtime del estado de Tenants (active, trial, suspended)
+  const [tenantStatusMap, setTenantStatusMap] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('syspim_saas_tenants_status') || '{}');
+    } catch(e) { return {}; }
+  });
+
+  // Consultar Supabase Realtime para validar el estado del Tenant en vivo
+  useEffect(() => {
+    const checkSupabaseTenantStatus = () => {
+      const sbClient = (window.ColmadoSupabase && window.ColmadoSupabase.client) || window.supabaseClient;
+      if (sbClient) {
+        sbClient.from('tenants').select('id, slug, status').then(({ data }) => {
+          if (data && Array.isArray(data)) {
+            const newMap = {};
+            data.forEach(t => {
+              newMap[t.id] = t.status;
+              if (t.slug) newMap[t.slug] = t.status;
+            });
+            setTenantStatusMap(prev => ({ ...prev, ...newMap }));
+          }
+        }).catch(() => {});
+      }
+    };
+
+    checkSupabaseTenantStatus();
+    const interval = setInterval(checkSupabaseTenantStatus, 3000);
+
+    const handleStorageStatus = (e) => {
+      if (e.key === 'syspim_saas_tenants_status' && e.newValue) {
+        try { setTenantStatusMap(JSON.parse(e.newValue)); } catch(err){}
+      }
+    };
+
+    let broadcast;
+    try {
+      broadcast = new BroadcastChannel('syspim_orders_channel');
+      broadcast.onmessage = (event) => {
+        if (event.data && event.data.type === 'TENANT_STATUS_UPDATE') {
+          setTenantStatusMap(prev => ({
+            ...prev,
+            [event.data.tenantId]: event.data.status,
+            [event.data.slug]: event.data.status
+          }));
+        }
+      };
+    } catch(e) {}
+
+    window.addEventListener('storage', handleStorageStatus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageStatus);
+      try { broadcast?.close(); } catch(e){}
+    };
+  }, []);
+
+  const activeTenant = useMemo(() => {
+    const found = tenants.find(t => t.id === activeTenantId || t.slug === activeTenantId) || tenants[0];
+    const statusOverride = tenantStatusMap[found.id] || tenantStatusMap[found.slug];
+    return statusOverride ? { ...found, status: statusOverride } : found;
+  }, [tenants, activeTenantId, tenantStatusMap]);
   const [productos, setProductos] = useState(() => {
     try {
       const saved = localStorage.getItem('syspim_productos_list');
@@ -1386,10 +1448,6 @@ function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [cart]);
-
-  const activeTenant = useMemo(() => {
-    return tenants.find(t => t.id === activeTenantId) || tenants[0];
-  }, [tenants, activeTenantId]);
 
   // Cálculo dinámico y real de estadísticas por cliente (Garantiza exactitud matemática sin depender de polling)
   const realCustomerStats = useMemo(() => {
@@ -2921,11 +2979,48 @@ function App() {
         </div>
       )}
 
-      {/* MODAL AUDITORÍA KARDEX */}
-      <KardexModal 
-        isOpen={showKardexModal} 
-        onClose={() => setShowKardexModal(false)} 
-      />
+      {/* OVERLAY INTERCEPTOR DE TENANT SUSPENDIDO (KILL SWITCH SAAS) */}
+      {activeTenant?.status === 'suspended' && (
+        <div className="fixed inset-0 z-50 bg-[#060B14]/90 backdrop-blur-md flex items-center justify-center p-6 text-center">
+          <div className="bg-[#111827] border border-[#EF4444]/40 max-w-lg w-full p-8 rounded-[28px] shadow-[0_0_50px_rgba(239,68,68,0.25)] space-y-5 animate-fade-in-up">
+            <div className="w-20 h-20 rounded-3xl bg-[#EF4444]/15 border border-[#EF4444]/30 text-[#EF4444] text-4xl flex items-center justify-center mx-auto shadow-inner">
+              🚫
+            </div>
+            <div>
+              <span className="text-[11px] font-extrabold uppercase tracking-widest text-[#EF4444] bg-[#EF4444]/10 border border-[#EF4444]/20 px-3 py-1 rounded-full">
+                Kill-Switch SaaS Activo
+              </span>
+              <h2 className="text-2xl font-black text-[#F8FAFC] font-jakarta mt-3">
+                {activeTenant?.nombre || 'Este Colmado'} — Servicio Suspendido
+              </h2>
+              <p className="text-xs text-[#94A3B8] mt-2 leading-relaxed font-medium">
+                El acceso operativo a este negocio ha sido suspendido desde la Terminal Maestra de SuperAdmin SaaS. Las ventas en caja, catálogo web y pedidos han sido bloqueados preventivamente.
+              </p>
+            </div>
+
+            <div className="bg-[#182235] border border-[#2A364B] p-4 rounded-2xl text-xs text-left space-y-2 font-medium">
+              <div className="flex justify-between border-b border-[#2A364B] pb-2">
+                <span className="text-[#94A3B8]">Inquilino / Slug:</span>
+                <span className="font-bold text-[#F8FAFC]">/{activeTenant?.slug || 'colmado-don-pedro'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#94A3B8]">Estado en Base de Datos:</span>
+                <span className="font-extrabold text-[#EF4444] uppercase">SUSPENDIDO</span>
+              </div>
+            </div>
+
+            <div className="pt-2 flex gap-3">
+              <a
+                href="superadmin.html"
+                target="_blank"
+                className="flex-1 py-3 bg-[#0284C7] hover:bg-[#0369A1] text-white font-extrabold text-xs rounded-xl shadow-lg transition-all"
+              >
+                👑 Abrir Terminal SuperAdmin SaaS
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

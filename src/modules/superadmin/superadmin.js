@@ -388,6 +388,22 @@
         // Actualizar en estado local
         tenantsList = tenantsList.map(t => t.id === tenantId ? { ...t, status: newStatus } : t);
         
+        // Persistir mapa de estados de tenants en localStorage para sincronización instantánea
+        try {
+            const statusMap = JSON.parse(localStorage.getItem('syspim_saas_tenants_status') || '{}');
+            const targetTenant = tenantsList.find(t => t.id === tenantId);
+            if (targetTenant) {
+                statusMap[targetTenant.id] = newStatus;
+                if (targetTenant.slug) statusMap[targetTenant.slug] = newStatus;
+            }
+            localStorage.setItem('syspim_saas_tenants_status', JSON.stringify(statusMap));
+
+            // BroadcastChannel para sincronizar en tiempo real con POS y Catálogo PWA sin recargar
+            const broadcast = new BroadcastChannel('syspim_orders_channel');
+            broadcast.postMessage({ type: 'TENANT_STATUS_UPDATE', tenantId, status: newStatus, slug: targetTenant?.slug });
+            broadcast.close();
+        } catch(e) {}
+
         // Si se actualizó el tenant activo en AppState, actualizarlo
         if (window.AppState && window.AppState.currentTenant && window.AppState.currentTenant.id === tenantId) {
             window.AppState.currentTenant.status = newStatus;

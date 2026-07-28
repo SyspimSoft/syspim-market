@@ -198,6 +198,42 @@ import '../styles.css';
         const tenantSlug = urlParams.get('tenant') || 'colmado-don-pedro';
         const colmadoNombre = tenantSlug.replace(/-/g, ' ').toUpperCase();
 
+        const [tenantStatus, setTenantStatus] = useState('active');
+
+        useEffect(() => {
+          const checkStatus = () => {
+            try {
+              const statusMap = JSON.parse(localStorage.getItem('syspim_saas_tenants_status') || '{}');
+              if (statusMap[tenantSlug] || statusMap['t-001']) {
+                setTenantStatus(statusMap[tenantSlug] || statusMap['t-001']);
+              }
+            } catch(e){}
+            const sbClient = (window.ColmadoSupabase && window.ColmadoSupabase.client) || window.supabaseClient;
+            if (sbClient) {
+              sbClient.from('tenants').select('slug, status').eq('slug', tenantSlug).then(({ data }) => {
+                if (data && data.length > 0 && data[0].status) setTenantStatus(data[0].status);
+              }).catch(() => {});
+            }
+          };
+          checkStatus();
+          const interval = setInterval(checkStatus, 3000);
+
+          let broadcast;
+          try {
+            broadcast = new BroadcastChannel('syspim_orders_channel');
+            broadcast.onmessage = (event) => {
+              if (event.data && event.data.type === 'TENANT_STATUS_UPDATE' && (event.data.slug === tenantSlug || event.data.tenantId === tenantSlug)) {
+                setTenantStatus(event.data.status);
+              }
+            };
+          } catch(e) {}
+
+          return () => {
+            clearInterval(interval);
+            try { broadcast?.close(); } catch(e){}
+          };
+        }, [tenantSlug]);
+
         const showToast = (msg) => {
           setToastMsg(msg);
           setTimeout(() => setToastMsg(null), 3000);
@@ -446,6 +482,26 @@ import '../styles.css';
         return (
           <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
             
+            {/* OVERLAY DE TENANT SUSPENDIDO EN CATÁLOGO PWA */}
+            {tenantStatus === 'suspended' && (
+              <div className="fixed inset-0 z-50 bg-[#060B14]/90 backdrop-blur-md flex items-center justify-center p-6 text-center">
+                <div className="bg-[#111827] border border-[#EF4444]/40 max-w-sm w-full p-6 rounded-[24px] shadow-2xl space-y-4 text-white">
+                  <div className="w-16 h-16 rounded-2xl bg-[#EF4444]/15 border border-[#EF4444]/30 text-[#EF4444] text-3xl flex items-center justify-center mx-auto">
+                    🚫
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold font-jakarta">Colmado Temporalmente Inactivo</h2>
+                    <p className="text-xs text-[#94A3B8] mt-1.5 leading-relaxed font-medium">
+                      Este colmado no se encuentra recibiendo pedidos a domicilio en este momento. Por favor intenta más tarde.
+                    </p>
+                  </div>
+                  <div className="bg-[#182235] p-3 rounded-xl text-xs font-mono text-[#94A3B8]">
+                    /{tenantSlug} • Estado: Suspendido
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* TOAST FLOATER */}
             {toastMsg && (
               <div className="fixed top-4 right-4 z-50 bg-[#0F172A] text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg animate-fade-in-up flex items-center gap-2">
